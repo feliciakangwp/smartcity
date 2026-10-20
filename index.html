@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Agency ICT Cityscape</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/styles.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <div class="brand-name">ICT Cityscape</div>
+        <div class="brand-sub">Agency system landscape</div>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Views">
+      <button class="tab" role="tab" id="tab-overview" data-view="overview" aria-controls="view-overview">Overview</button>
+      <button class="tab" role="tab" id="tab-register" data-view="register" aria-controls="view-register">System register</button>
+      <button class="tab" role="tab" id="tab-city" data-view="city" aria-controls="view-city">City landscape</button>
+    </nav>
+    <div class="session" id="session-chip"></div>
+  </div>
+</header>
+
+<main>
+  <section class="view" id="view-overview" role="tabpanel" aria-labelledby="tab-overview"></section>
+  <section class="view" id="view-register" role="tabpanel" aria-labelledby="tab-register" hidden></section>
+  <section class="view view-city" id="view-city" role="tabpanel" aria-labelledby="tab-city" hidden>
+    <div class="city-stage" id="city-stage">
+      <div class="city-loading" id="city-loading">Building the city…</div>
+    </div>
+    <aside class="city-legend" aria-label="Legend">
+      <div class="legend-title">How to read the city</div>
+      <ul>
+        <li><span class="lg lg-truck"></span>Delivery truck: push and pull both declared</li>
+        <li><span class="lg lg-amber"></span>Amber truck: link declared, but one end is not built</li>
+        <li><span class="lg lg-person"></span><span>Courier with a <b>?</b> overhead: broken linkage, data stuck</span></li>
+        <li><span class="lg lg-scaffold"></span>Scaffolding: part still under construction</li>
+        <li><span class="lg lg-old"></span>Weathered brick: legacy system</li>
+        <li><span class="lg lg-leak"></span>Dripping pipe: known data leaks</li>
+      </ul>
+      <label class="check"><input type="checkbox" id="city-rotate"> Slowly rotate camera</label>
+    </aside>
+    <div class="city-info" id="city-info" hidden></div>
+  </section>
+</main>
+
+<div class="modal-backdrop" id="login-modal" hidden>
+  <form class="modal" id="login-form" aria-labelledby="login-title" novalidate>
+    <h2 id="login-title">Sign in as product manager</h2>
+    <p class="muted" id="login-desc"></p>
+    <label class="field">
+      <span>Username</span>
+      <input id="login-user" name="username" autocomplete="username" required>
+    </label>
+    <label class="field">
+      <span>Passcode</span>
+      <input id="login-pass" name="passcode" type="password" autocomplete="current-password" required>
+    </label>
+    <p class="form-error" id="login-error" hidden></p>
+    <p class="hint">Demo: username <code id="login-hint-user"></code>, passcode <code>demo</code>.</p>
+    <div class="modal-actions">
+      <button type="button" class="btn ghost" id="login-cancel">Cancel</button>
+      <button type="submit" class="btn primary">Sign in</button>
+    </div>
+  </form>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
