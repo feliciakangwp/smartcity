@@ -16,7 +16,11 @@ export type ZoneTheme =
   | 'finance'
   | 'traveller'
   | 'integration'
+  | 'shared'
   | 'generic';
+
+/** A division owns and uses systems; a shared zone only displays cross-division systems. */
+export type ZoneKind = 'division' | 'shared';
 
 export interface ZonePlot {
   id: ID;
@@ -36,6 +40,7 @@ export interface Zone extends Audited {
   description: string;
   color: string;
   theme: ZoneTheme;
+  kind: ZoneKind;
   plotId: ID;
   /** 0.6–1 share of the plot footprint the zone occupies. */
   scale: number;
@@ -73,7 +78,12 @@ export interface System extends Audited {
   name: string;
   acronym: string;
   description: string;
+  /** Display zone: where the building is placed in the port. */
   zoneId: ID;
+  /** Accountable division. Null while ownership is unconfirmed. */
+  owningZoneId: ID | null;
+  /** Divisions that use the system (may differ from the owner). */
+  usingZoneIds: ID[];
   businessPurpose: string;
   category: SystemCategory;
   status: SystemStatus;

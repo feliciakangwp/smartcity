@@ -1,18 +1,22 @@
 // Add / edit system form, shared by the Port World dialog and the Studio registry.
 import { useState, type FormEvent } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-import { CRITICALITIES, SYSTEM_CATEGORIES, SYSTEM_STATUSES, type System } from '@/types/domain';
+import { CRITICALITIES, SYSTEM_CATEGORIES, SYSTEM_STATUSES, type System, type Zone } from '@/types/domain';
 import type { NewSystem } from '@/store/landscape';
 import { useLandscape } from '@/store/landscape';
 import { activeZones } from '@/lib/metrics';
-import { Button } from '@/components/ui';
+import { Button, Chip, ZoneSwatch, cx } from '@/components/ui';
 
-export function blankSystem(zoneId: string): NewSystem {
+/** New system displayed in `zoneId`. If that zone is a division it also becomes the owner and first user. */
+export function blankSystem(zoneId: string, zones: Zone[] = []): NewSystem {
+  const owner = zones.some((z) => z.id === zoneId && z.kind === 'division') ? zoneId : null;
   return {
     name: '',
     acronym: '',
     description: '',
     zoneId,
+    owningZoneId: owner,
+    usingZoneIds: owner ? [owner] : [],
     businessPurpose: '',
     category: 'Other',
     status: 'Planned',
@@ -24,15 +28,18 @@ export function blankSystem(zoneId: string): NewSystem {
   };
 }
 
-type Errors = Partial<Record<'name' | 'acronym' | 'zoneId' | 'docs', string>>;
+type Errors = Partial<Record<'name' | 'acronym' | 'zoneId' | 'owningZoneId' | 'usingZoneIds' | 'docs', string>>;
 
-export function validateSystem(v: NewSystem, all: System[], selfId?: string): Errors {
+export function validateSystem(v: NewSystem, all: System[], selfId?: string, zones: Zone[] = []): Errors {
   const e: Errors = {};
   if (!v.name.trim()) e.name = 'Enter the system name.';
   const ac = v.acronym.trim().toUpperCase();
   if (!/^[A-Z0-9]{2,8}$/.test(ac)) e.acronym = 'Use 2–8 letters or digits, for example TDP.';
   else if (all.some((s) => !s.archived && s.id !== selfId && s.acronym.toUpperCase() === ac)) e.acronym = `${ac} is already used by another system.`;
-  if (!v.zoneId) e.zoneId = 'Choose the owning zone.';
+  if (!v.zoneId) e.zoneId = 'Choose the zone where the building is displayed.';
+  const division = (id: string) => zones.length === 0 || zones.some((z) => z.id === id && z.kind === 'division' && !z.archived);
+  if (v.owningZoneId && !division(v.owningZoneId)) e.owningZoneId = 'The owner must be a division, not a shared zone.';
+  if (v.usingZoneIds.some((id) => !division(id))) e.usingZoneIds = 'Using divisions must be divisions, not shared zones.';
   const bad = v.docs.find((d) => d.url && !/^https?:\/\/\S+$/i.test(d.url));
   if (bad) e.docs = `“${bad.url}” is not a web address. Start it with https://`;
   return e;
@@ -51,7 +58,9 @@ export function SystemForm({
   onSubmit: (v: NewSystem) => void;
   onCancel?: () => void;
 }) {
-  const zones = activeZones(useLandscape((s) => s.zones));
+  const allZones = useLandscape((s) => s.zones);
+  const zones = activeZones(allZones);
+  const divisions = zones.filter((z) => z.kind === 'division');
   const systems = useLandscape((s) => s.systems);
   const [v, setV] = useState<NewSystem>(initial);
   const [errors, setErrors] = useState<Errors>({});
@@ -59,13 +68,14 @@ export function SystemForm({
 
   const submit = (ev: FormEvent) => {
     ev.preventDefault();
-    const e = validateSystem(v, systems, selfId);
+    const e = validateSystem(v, systems, selfId, allZones);
     setErrors(e);
     if (Object.keys(e).length) return;
     onSubmit({
       ...v,
       name: v.name.trim(),
       acronym: v.acronym.trim().toUpperCase(),
+      usingZoneIds: [...new Set(v.usingZoneIds)],
       docs: v.docs.filter((d) => d.url.trim()).map((d) => ({ label: d.label.trim() || d.url.trim(), url: d.url.trim() })),
     });
   };
@@ -86,19 +96,8 @@ export function SystemForm({
           {err('acronym')}
         </label>
       </div>
+      <OwnershipFields v={v} setV={setV} divisions={divisions} zones={zones} errors={errors} />
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1">
-          <span className="label">Owning division / zone</span>
-          <select id="sys-zone" className="input" value={v.zoneId} onChange={(e) => set('zoneId', e.target.value)}>
-            <option value="">Choose a zone…</option>
-            {zones.map((z) => (
-              <option key={z.id} value={z.id}>
-                {z.name}
-              </option>
-            ))}
-          </select>
-          {err('zoneId')}
-        </label>
         <label className="flex flex-col gap-1">
           <span className="label">Category (sets the building type)</span>
           <select id="sys-category" className="input" value={v.category} onChange={(e) => set('category', e.target.value as NewSystem['category'])}>
@@ -175,5 +174,107 @@ export function SystemForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+/** Owning division, using divisions and display zone. Shared status is derived, not entered. */
+function OwnershipFields({
+  v,
+  setV,
+  divisions,
+  zones,
+  errors,
+}: {
+  v: NewSystem;
+  setV: React.Dispatch<React.SetStateAction<NewSystem>>;
+  divisions: Zone[];
+  zones: Zone[];
+  errors: Errors;
+}) {
+  const shared = v.usingZoneIds.filter((id) => divisions.some((d) => d.id === id)).length >= 2;
+  const sharedZone = zones.find((z) => z.kind === 'shared');
+  const setOwner = (owner: string | null) =>
+    setV((x) => ({
+      ...x,
+      owningZoneId: owner,
+      // Placement follows the owner unless the administrator already chose somewhere else.
+      zoneId: owner && (!x.zoneId || x.zoneId === x.owningZoneId) ? owner : x.zoneId,
+      // Swap the default user along with the owner; keep any users the administrator picked.
+      usingZoneIds:
+        owner && (x.usingZoneIds.length === 0 || (x.usingZoneIds.length === 1 && x.usingZoneIds[0] === x.owningZoneId))
+          ? [owner]
+          : x.usingZoneIds,
+    }));
+  const toggleUser = (id: string) =>
+    setV((x) => ({ ...x, usingZoneIds: x.usingZoneIds.includes(id) ? x.usingZoneIds.filter((u) => u !== id) : [...x.usingZoneIds, id] }));
+  const err = (k: keyof Errors) => errors[k] && <span className="text-xs font-medium text-red-700">{errors[k]}</span>;
+
+  return (
+    <fieldset className="flex flex-col gap-3 rounded-md border border-ink-200 bg-harbor-50/60 p-3">
+      <legend className="px-1 text-xs font-semibold text-ink-700">Ownership, usage and placement</legend>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="flex flex-col gap-1">
+          <span className="label">Owning division</span>
+          <select id="sys-owner-zone" className="input" value={v.owningZoneId ?? ''} onChange={(e) => setOwner(e.target.value || null)}>
+            <option value="">Unassigned (not yet confirmed)</option>
+            {divisions.map((z) => (
+              <option key={z.id} value={z.id}>
+                {z.name}
+              </option>
+            ))}
+          </select>
+          {err('owningZoneId')}
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="label">Display zone (where the building stands)</span>
+          <select id="sys-zone" className="input" value={v.zoneId} onChange={(e) => setV((x) => ({ ...x, zoneId: e.target.value }))}>
+            <option value="">Choose a zone…</option>
+            {zones.map((z) => (
+              <option key={z.id} value={z.id}>
+                {z.name}
+                {z.kind === 'shared' ? ' (shared)' : ''}
+                {z.id === v.owningZoneId ? ' (owner)' : ''}
+              </option>
+            ))}
+          </select>
+          {err('zoneId')}
+        </label>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <span className="label" id="sys-users-label">
+          Using divisions
+        </span>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby="sys-users-label">
+          {divisions.map((z) => {
+            const on = v.usingZoneIds.includes(z.id);
+            return (
+              <button
+                key={z.id}
+                id={`sys-user-${z.id}`}
+                type="button"
+                aria-pressed={on}
+                onClick={() => toggleUser(z.id)}
+                className={cx(
+                  'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors',
+                  on ? 'border-navy-700 bg-navy-800 text-white' : 'border-ink-200 bg-white text-ink-700 hover:border-ink-300',
+                )}
+              >
+                <ZoneSwatch color={z.color} className="h-2.5 w-2.5" />
+                {z.name}
+              </button>
+            );
+          })}
+        </div>
+        {err('usingZoneIds')}
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-xs text-ink-700">
+        {shared ? <Chip color="#0d9488">Shared system</Chip> : <Chip>Single-division system</Chip>}
+        <span>
+          {shared
+            ? `Used by ${v.usingZoneIds.length} divisions. ${sharedZone && v.zoneId !== sharedZone.id ? `You can display it in ${sharedZone.name}; it is not moved automatically.` : ''}`
+            : 'Becomes a shared system when two or more divisions use it.'}
+        </span>
+      </div>
+    </fieldset>
   );
 }

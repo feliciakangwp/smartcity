@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Search } from 'lucide-react';
 import { useLandscape } from '@/store/landscape';
-import { activeIntegrations, activeSystems, activeZones } from '@/lib/metrics';
+import { activeIntegrations, activeSystems, activeZones, isShared, matchesFilter, owningDivision, usingDivisions, type SystemFilter } from '@/lib/metrics';
 import { SYSTEM_CATEGORIES, SYSTEM_STATUSES } from '@/types/domain';
 import { Button, Chip, Empty, StatusChip, ZoneSwatch } from '@/components/ui';
 
@@ -16,6 +16,7 @@ export default function SystemsPage() {
   const [zone, setZone] = useState('');
   const [category, setCategory] = useState('');
   const [status, setStatus] = useState('');
+  const [usage, setUsage] = useState<SystemFilter>('all');
 
   const zones = activeZones(zonesAll);
   const zoneById = new Map(zones.map((z) => [z.id, z]));
@@ -26,9 +27,10 @@ export default function SystemsPage() {
     const term = q.trim().toLowerCase();
     return systems
       .filter((s) => (!zone || s.zoneId === zone) && (!category || s.category === category) && (!status || s.status === status))
+      .filter((s) => matchesFilter(s, zonesAll, usage))
       .filter((s) => !term || [s.name, s.acronym, s.description, s.businessPurpose, s.owner ?? ''].some((f) => f.toLowerCase().includes(term)))
       .sort((a, b) => (zoneById.get(a.zoneId)?.sortOrder ?? 0) - (zoneById.get(b.zoneId)?.sortOrder ?? 0) || a.acronym.localeCompare(b.acronym));
-  }, [systems, q, zone, category, status, zoneById]);
+  }, [systems, q, zone, category, status, usage, zonesAll, zoneById]);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -59,6 +61,12 @@ export default function SystemsPage() {
             <option value="">All categories</option>
             {SYSTEM_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
           </select>
+          <select id="dir-usage" className="input w-auto" value={usage} onChange={(e) => setUsage(e.target.value as SystemFilter)} aria-label="Filter by ownership">
+            <option value="all">All ownership</option>
+            <option value="owned">Division-owned</option>
+            <option value="shared">Shared</option>
+            <option value="unassigned">Unassigned owner</option>
+          </select>
           <select id="dir-status" className="input w-auto" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Filter by status">
             <option value="">All statuses</option>
             {SYSTEM_STATUSES.map((c) => <option key={c}>{c}</option>)}
@@ -69,11 +77,12 @@ export default function SystemsPage() {
           {rows.length === 0 ? (
             <div className="p-4"><Empty>No systems match these filters.</Empty></div>
           ) : (
-            <table className="w-full min-w-[820px] text-sm">
+            <table className="w-full min-w-[960px] text-sm">
               <thead className="table-head">
                 <tr>
                   <th className="px-4 py-2">System</th>
-                  <th className="px-4 py-2">Zone</th>
+                  <th className="px-4 py-2">Display zone</th>
+                  <th className="px-4 py-2">Owner · users</th>
                   <th className="px-4 py-2">Category</th>
                   <th className="px-4 py-2">Status</th>
                   <th className="px-4 py-2">Criticality</th>
@@ -99,6 +108,14 @@ export default function SystemsPage() {
                       </td>
                       <td className="px-4 py-2.5">
                         <span className="flex items-center gap-2"><ZoneSwatch color={z?.color ?? '#999'} />{z?.name}</span>
+                      </td>
+                      <td className="px-4 py-2.5 text-xs text-ink-700">
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          {owningDivision(s, zonesAll) ? zoneById.get(owningDivision(s, zonesAll)!)?.name : <Chip>Unassigned</Chip>}
+                          <span className="text-ink-300">·</span>
+                          <span className="num">{usingDivisions(s, zonesAll).length} using</span>
+                          {isShared(s, zonesAll) && <Chip color="#0d9488">Shared</Chip>}
+                        </span>
                       </td>
                       <td className="px-4 py-2.5 text-ink-700">{s.category}</td>
                       <td className="px-4 py-2.5"><StatusChip status={s.status} /></td>

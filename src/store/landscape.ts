@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
 import type { Integration, LandscapeData, PlatformSettings, SimulationSettings, System, Zone } from '@/types/domain';
 import { createSeed, SEED_VERSION } from '@/data/seed';
+import { upgradeLandscape } from '@/data/upgrade';
 import { DEMO_STORAGE_KEY } from '@/lib/datasource';
 
 const now = () => new Date().toISOString();
@@ -91,13 +92,18 @@ export const useLandscape = create<LandscapeStore>()(
           platform: { ...s.platform, mapRings: Math.min(Math.max(...s.plots.map((p) => p.ring)), s.platform.mapRings + 1) },
         })),
 
-      importData: (data) => set({ ...data }),
+      importData: (data) => set({ ...upgradeLandscape(data), version: SEED_VERSION }),
       resetDemo: () => set({ ...createSeed() }),
     }),
     {
       name: DEMO_STORAGE_KEY,
       version: SEED_VERSION,
       storage: createJSONStorage(() => safeStorage),
+      // v1 → v2: ownership/usage fields, zone kinds, Shared Services Hub. Keeps every user edit.
+      migrate: (persisted, version) => {
+        const state = persisted as Partial<LandscapeData>;
+        return (version < 2 ? { ...upgradeLandscape(state), version: SEED_VERSION } : state) as LandscapeStore;
+      },
       partialize: (s) => {
         const { zones, plots, systems, integrations, journeys, ships, berths, simulation, platform, version } = s;
         return { zones, plots, systems, integrations, journeys, ships, berths, simulation, platform, version };
@@ -121,5 +127,5 @@ export function validateImport(raw: unknown): { ok: true; data: LandscapeData } 
   const zoneIds = new Set(d.zones!.map((z) => z.id));
   const orphan = d.systems!.find((s) => !zoneIds.has(s.zoneId));
   if (orphan) return { ok: false, error: `System "${orphan.name}" points to a zone that is not in the file.` };
-  return { ok: true, data: { ...createSeed(), ...(d as LandscapeData) } };
+  return { ok: true, data: upgradeLandscape({ ...createSeed(), ...(d as LandscapeData) }) };
 }

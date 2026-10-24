@@ -1,5 +1,6 @@
 // UI state for the Port World: selection, camera focus, toggles, simulation speed.
 import { create } from 'zustand';
+import type { SystemFilter } from '@/lib/metrics';
 
 export type SelectionKind = 'zone' | 'system' | 'ship';
 export interface Selection {
@@ -28,12 +29,15 @@ interface WorldState {
   quality: ResolvedQuality;
   /** Zone the Add System dialog is open for. */
   addSystemZone: string | null;
+  systemFilter: SystemFilter;
+  showCrossDivision: boolean;
 
+  setSystemFilter: (f: SystemFilter) => void;
   openAddSystem: (zoneId: string | null) => void;
   select: (s: Selection | null, focus?: boolean) => void;
   setHovered: (id: string | null) => void;
   focusOn: (kind: FocusKind, id?: string) => void;
-  toggle: (key: 'showLabels' | 'showLines' | 'showAmbient') => void;
+  toggle: (key: 'showLabels' | 'showLines' | 'showAmbient' | 'showCrossDivision') => void;
   setSpeed: (s: Speed) => void;
   setDashboardExpanded: (v: boolean) => void;
   setImpactSystem: (id: string | null) => void;
@@ -54,6 +58,10 @@ export const useWorld = create<WorldState>()((set) => ({
   impactSystemId: null,
   quality: isMobile ? 'low' : 'high',
   addSystemZone: null,
+  systemFilter: 'all',
+  showCrossDivision: false,
+
+  setSystemFilter: (systemFilter) => set({ systemFilter }),
 
   openAddSystem: (addSystemZone) => set({ addSystemZone }),
 

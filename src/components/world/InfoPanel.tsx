@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowDownLeft, ArrowUpRight, Crosshair, ExternalLink, Network, Pencil, Plus, Ship as ShipIcon, Workflow, X } from 'lucide-react';
 import { useLandscape } from '@/store/landscape';
 import { useWorld } from '@/store/world';
-import { activeIntegrations, activeSystems, integrationsFor } from '@/lib/metrics';
+import { activeIntegrations, activeSystems, integrationsFor, isShared, owningDivision, usingDivisions } from '@/lib/metrics';
 import { DATA_TYPE_COLORS, type Integration } from '@/types/domain';
 import { SHIP_STATES } from '@/sim/maritime';
 import { currentSim } from '@/world/maritime/SimContext';
@@ -30,7 +30,10 @@ export function InfoPanel() {
 
 function ZoneDetails({ id }: { id: string }) {
   const zone = useLandscape((s) => s.zones.find((z) => z.id === id));
-  const systems = useLandscape((s) => s.systems).filter((s) => s.zoneId === id && !s.archived);
+  const allSystems = useLandscape((s) => s.systems);
+  const zones = useLandscape((s) => s.zones);
+  const systems = allSystems.filter((s) => s.zoneId === id && !s.archived);
+  const usesElsewhere = activeSystems(allSystems, zones).filter((s) => s.zoneId !== id && usingDivisions(s, zones).includes(id));
   const select = useWorld((s) => s.select);
   const openAdd = useWorld((s) => s.openAddSystem);
   if (!zone) return <p className="text-sm text-ink-500">This zone is no longer in the register.</p>;
@@ -42,10 +45,11 @@ function ZoneDetails({ id }: { id: string }) {
         </div>
         <h2 className="mt-1 text-xl font-bold text-navy-900">{zone.name}</h2>
         <p className="mt-1 text-sm text-ink-700">{zone.description}</p>
+        {zone.kind === 'shared' && <p className="mt-2"><Chip color={zone.color}>Shared services zone · not a division</Chip></p>}
       </div>
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Systems ({systems.length})</h3>
+          <h3 className="text-sm font-semibold">Systems displayed here ({systems.length})</h3>
           <Button size="sm" icon={Plus} onClick={() => openAdd(zone.id)}>
             Add system
           </Button>
@@ -70,6 +74,23 @@ function ZoneDetails({ id }: { id: string }) {
           </ul>
         )}
       </div>
+      {usesElsewhere.length > 0 && (
+        <div>
+          <h3 className="mb-1 text-sm font-semibold">Also uses ({usesElsewhere.length})</h3>
+          <p className="mb-1.5 text-xs text-ink-500">Systems this division uses that are displayed in another zone.</p>
+          <ul className="flex flex-col gap-1">
+            {usesElsewhere.map((s) => (
+              <li key={s.id}>
+                <button type="button" onClick={() => select({ kind: 'system', id: s.id }, true)} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-harbor-50">
+                  <span className="w-11 shrink-0 font-mono text-xs font-semibold text-navy-700">{s.acronym}</span>
+                  <span className="min-w-0 flex-1 truncate">{s.name}</span>
+                  {isShared(s, zones) && <Chip color="#0d9488">Shared</Chip>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <Link to={`/admin/zones?edit=${zone.id}`} className="inline-flex items-center gap-1.5 text-sm font-semibold text-harbor-500 hover:underline">
         <Pencil className="h-3.5 w-3.5" /> Edit zone in Studio
       </Link>
@@ -100,9 +121,18 @@ function SystemDetails({ id }: { id: string }) {
   if (!system) return <p className="text-sm text-ink-500">This system is no longer in the register.</p>;
 
   const zone = zones.find((z) => z.id === system.zoneId);
+  const zoneById = new Map(zones.map((z) => [z.id, z]));
   const live = activeSystems(allSystems, zones);
   const byId = new Map(live.map((s) => [s.id, s]));
   const { incoming, outgoing } = integrationsFor(id, activeIntegrations(integrations, live));
+  const ownerId = owningDivision(system, zones);
+  const users = usingDivisions(system, zones);
+  const shared = isShared(system, zones);
+  const partners = [...new Set([...incoming, ...outgoing].flatMap((i) => [i.sourceId, i.destinationId]))].filter((x) => x !== id).map((x) => byId.get(x)).filter((x) => !!x);
+  const zoneChip = (zid: string) => {
+    const z = zoneById.get(zid);
+    return z ? <Chip key={zid} color={z.color}>{z.name}</Chip> : null;
+  };
 
   const flow = (i: Integration, dir: 'in' | 'out') => {
     const otherId = dir === 'in' ? (i.destinationId === id ? i.sourceId : i.destinationId) : i.sourceId === id ? i.destinationId : i.sourceId;
@@ -139,11 +169,23 @@ function SystemDetails({ id }: { id: string }) {
         </h2>
         <div className="mt-2 flex flex-wrap gap-1.5">
           <StatusChip status={system.status} />
+          {shared && <Chip color="#0d9488">Shared system</Chip>}
           <Chip>{system.category}</Chip>
           <Chip>{system.criticality}</Chip>
         </div>
       </div>
       <p className="text-sm text-ink-700">{system.businessPurpose || system.description}</p>
+      <section className="flex flex-col gap-2 rounded-md border border-ink-200 bg-harbor-50/60 p-3" aria-label="Ownership and usage">
+        <h3 className="text-sm font-semibold">Ownership and usage</h3>
+        <dl className="grid grid-cols-[104px_1fr] items-start gap-x-3 gap-y-2 text-sm">
+          <Row label="Owning division">{ownerId ? zoneChip(ownerId) : <Chip>Unassigned</Chip>}</Row>
+          <Row label="Display zone">{zoneChip(system.zoneId)}</Row>
+          <Row label={`Using divisions (${users.length})`}>
+            {users.length ? <span className="flex flex-wrap gap-1">{users.map(zoneChip)}</span> : <span className="text-ink-500">None recorded</span>}
+          </Row>
+        </dl>
+        <p className="text-xs text-ink-500">Division usage is shown with flowing dashed lines. It is not an integration.</p>
+      </section>
       <dl className="grid grid-cols-[96px_1fr] gap-x-3 gap-y-1.5 text-sm">
         {system.owner && <Row label="Owner">{system.owner}</Row>}
         {system.techStack && <Row label="Technology">{system.techStack}</Row>}
@@ -181,11 +223,25 @@ function SystemDetails({ id }: { id: string }) {
         </Button>
       </div>
       <div>
-        <h3 className="mb-1 text-sm font-semibold">Incoming ({incoming.length})</h3>
+        <h3 className="mb-1 text-sm font-semibold">Connected ICT systems ({partners.length})</h3>
+        {partners.length ? (
+          <div className="flex flex-wrap gap-1">
+            {partners.map((p) => (
+              <button key={p.id} type="button" onClick={() => select({ kind: 'system', id: p.id }, true)} className="rounded-full focus-visible:ring-2">
+                <Chip color={zoneById.get(p.zoneId)?.color}>{p.acronym}</Chip>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-ink-500">No integrations configured.</p>
+        )}
+      </div>
+      <div>
+        <h3 className="mb-1 text-sm font-semibold">Incoming integrations ({incoming.length})</h3>
         {incoming.length ? <ul>{incoming.map((i) => flow(i, 'in'))}</ul> : <p className="text-sm text-ink-500">None recorded.</p>}
       </div>
       <div>
-        <h3 className="mb-1 text-sm font-semibold">Outgoing ({outgoing.length})</h3>
+        <h3 className="mb-1 text-sm font-semibold">Outgoing integrations ({outgoing.length})</h3>
         {outgoing.length ? <ul>{outgoing.map((i) => flow(i, 'out'))}</ul> : <p className="text-sm text-ink-500">None recorded.</p>}
       </div>
       <Link to={`/admin/systems?edit=${system.id}`} className="inline-flex items-center gap-1.5 text-sm font-semibold text-harbor-500 hover:underline">

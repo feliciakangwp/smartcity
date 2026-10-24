@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Archive, ArchiveRestore, MapPin, Pencil, Plus, Search } from 'lucide-react';
 import { useLandscape } from '@/store/landscape';
-import { activeZones } from '@/lib/metrics';
+import { activeZones, isShared, owningDivision, usingDivisions } from '@/lib/metrics';
 import { SYSTEM_STATUSES, type System } from '@/types/domain';
 import { Button, Chip, StatusChip, ZoneSwatch } from '@/components/ui';
 import { Modal } from '@/components/ui/Modal';
@@ -74,7 +74,8 @@ export default function AdminSystems() {
           <thead className="table-head">
             <tr>
               <th className="px-4 py-2">System</th>
-              <th className="px-4 py-2">Zone</th>
+              <th className="px-4 py-2">Display zone</th>
+              <th className="px-4 py-2">Owner · users</th>
               <th className="px-4 py-2">Category</th>
               <th className="px-4 py-2">Status</th>
               <th className="px-4 py-2">Updated</th>
@@ -92,6 +93,17 @@ export default function AdminSystems() {
                     {s.archived && <Chip className="ml-2">Archived</Chip>}
                   </td>
                   <td className="px-4 py-2"><span className="flex items-center gap-2"><ZoneSwatch color={z?.color ?? '#999'} />{z?.name}</span></td>
+                  <td className="px-4 py-2">
+                    <span className="flex flex-wrap items-center gap-1.5 text-xs text-ink-700">
+                      {(() => {
+                        const owner = owningDivision(s, zonesAll);
+                        return owner ? zoneById.get(owner)?.name : <Chip>Unassigned</Chip>;
+                      })()}
+                      <span className="text-ink-300">·</span>
+                      <span className="num">{usingDivisions(s, zonesAll).length} using</span>
+                      {isShared(s, zonesAll) && <Chip color="#0d9488">Shared</Chip>}
+                    </span>
+                  </td>
                   <td className="px-4 py-2 text-ink-700">{s.category}</td>
                   <td className="px-4 py-2"><StatusChip status={s.status} /></td>
                   <td className="num px-4 py-2 text-ink-500">{new Date(s.updatedAt).toLocaleDateString()}</td>
@@ -116,7 +128,7 @@ export default function AdminSystems() {
       {editing && (
         <Modal title={editing === 'new' ? 'Add system' : `Edit ${editing.acronym}`} onClose={close} wide>
           <SystemForm
-            initial={editing === 'new' ? blankSystem(zones[0]?.id ?? '') : { ...blankSystem(editing.zoneId), ...editing }}
+            initial={editing === 'new' ? blankSystem(zones[0]?.id ?? '', zones) : { ...blankSystem(editing.zoneId), ...editing }}
             selfId={editing === 'new' ? undefined : editing.id}
             submitLabel={editing === 'new' ? 'Add system' : 'Save changes'}
             onCancel={close}

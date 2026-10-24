@@ -75,6 +75,30 @@ The migration and seed were checked against PostgreSQL 16:
 
 Deep links: `/?focus=system:<id>`, `/?focus=zone:<id>`, `/?focus=ship:<id>`.
 
+## Cross-division shared systems
+
+Each system has three separate zone fields:
+
+| Field | Meaning |
+| --- | --- |
+| **Owning division** | The one accountable division. It can be **Unassigned** while ownership is unconfirmed. |
+| **Using divisions** | Any number of divisions that use the system. These can differ from the owner. |
+| **Display zone** | Where the building stands. It defaults to the owner and can be any zone, including a shared services zone. |
+
+**Shared system** is calculated, never stored: a system is shared when two or more divisions use it. Having several users never moves a system automatically. The Common Data Repository is a demo example: it is shared but still stands in its owner's zone.
+
+- **Shared Services Hub:** an ordinary zone whose kind is *shared services*, on the central plot behind the container yard. It is edited, moved or archived in **Studio → Zones**, and any zone can be marked as shared services. A shared zone displays systems but cannot own or use them.
+- **In the Port World:** selecting a system lights its building and every zone that uses it, and draws **flowing dashed lines in each division's colour** to those zones. Unrelated zones dim. These usage lines are deliberately different from integration arcs (solid, coloured by data type). A division using a system is not shown as an integration unless one is configured.
+- **Systems view filter** (bottom of the Port World): All, Division-owned, Shared or Unassigned. It has an optional **Show cross-division relationships** toggle.
+- **Dashboard:**
+  - figures for total shared systems, systems used across multiple divisions, and cross-division usage
+  - systems by owning division, and cross-division usage by division
+  - a shared systems table (click a system to fly to it)
+- **Demo data:** *Shared Case Management System (SCMS)* is illustrative. It is unassigned, used by Trade Gateway, Compliance Centre and Enforcement HQ, and displayed in the Shared Services Hub.
+- **Existing data:**
+  - **Saved demo data** is upgraded automatically from version 1. Each system's zone becomes its display zone, owner and first user, and nothing you edited is overwritten. JSON imports from older versions go through the same upgrade.
+  - **Database:** `supabase/migrations/20261025000000_shared_systems.sql` renames `systems.zone_id` to `display_zone_id`, keeping its values, foreign key and policies. It adds `owning_zone_id` (filled from the current zone only where no owner is set), `zones.kind`, and the `system_division_usage` table. That table has a unique key on (system, zone), triggers that allow only divisions to own or use systems, row-level security and audit logging. The migration is idempotent. It was tested on PostgreSQL 16 both upgrading a Phase 1 database (all system IDs and integrations kept) and on a fresh database.
+
 ## Routes
 
 | Route | Page |
@@ -194,6 +218,7 @@ ICT data flows (Phase 3) will be a separate layer and do not touch this simulati
 
 ### Phase 5: Advanced capabilities
 - [x] Impact analysis (upstream and downstream, highlighted in the world)
+- [x] Cross-division shared systems: ownership vs usage, Shared Services Hub, filter, dashboard, migration
 - [ ] Conditional journey builder UI
 - [ ] Expanded analytics
 - [ ] Editable vessels, routes, berth assignments and cargo operations

@@ -9,12 +9,13 @@ export function AddSystemDialog() {
   const close = useWorld((s) => s.openAddSystem);
   const select = useWorld((s) => s.select);
   const addSystem = useLandscape((s) => s.addSystem);
-  const zone = useLandscape((s) => s.zones.find((z) => z.id === zoneId));
+  const zones = useLandscape((s) => s.zones);
+  const zone = zones.find((z) => z.id === zoneId);
   if (!zoneId) return null;
   return (
     <Modal title={`Add a system${zone ? ` to ${zone.name}` : ''}`} onClose={() => close(null)} wide>
       <SystemForm
-        initial={blankSystem(zoneId)}
+        initial={blankSystem(zoneId, zones)}
         submitLabel="Add system"
         onCancel={() => close(null)}
         onSubmit={(v) => {

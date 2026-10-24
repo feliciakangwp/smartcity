@@ -11,6 +11,7 @@ export function DashboardStrip() {
   const kpis = [
     { label: 'Zones', value: s.totals.zones },
     { label: 'Systems', value: s.totals.systems },
+    { label: 'Shared systems', value: s.totals.sharedSystems },
     { label: 'Integrations', value: s.totals.integrations },
     { label: 'Published journeys', value: s.totals.publishedJourneys },
   ];

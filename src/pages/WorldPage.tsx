@@ -6,7 +6,7 @@ import { PortScene } from '@/world/PortScene';
 import { useWorld, type SelectionKind } from '@/store/world';
 import { DashboardStrip } from '@/components/dashboard/DashboardStrip';
 import { DashboardContent } from '@/components/dashboard/DashboardContent';
-import { DataTypeLegend, SimControls, WorldSearch, WorldToolbar } from '@/components/world/WorldControls';
+import { DataTypeLegend, SimControls, SystemsViewFilter, WorldSearch, WorldToolbar } from '@/components/world/WorldControls';
 import { InfoPanel } from '@/components/world/InfoPanel';
 import { AddSystemDialog } from '@/components/world/AddSystemDialog';
 
@@ -75,12 +75,19 @@ export default function WorldPage() {
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <DashboardContent onHighlight={() => setExpanded(false)} />
+              <DashboardContent
+                onHighlight={() => setExpanded(false)}
+                onFocusSystem={(id) => {
+                  setExpanded(false);
+                  select({ kind: 'system', id }, true);
+                }}
+              />
             </div>
           )}
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <SimControls />
+          <SystemsViewFilter />
           <DataTypeLegend />
         </div>
       </div>

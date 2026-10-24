@@ -10,6 +10,7 @@ export default function DashboardPage() {
     ['Systems', s.totals.systems],
     ['Integrations', s.totals.integrations],
     ['Cross-division integrations', s.totals.crossDivision],
+    ['Shared systems', s.totals.sharedSystems],
     ['Published journeys', s.totals.publishedJourneys],
   ] as const;
   return (
@@ -17,7 +18,7 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <div className="eyebrow">ICT dashboard</div>
         <h1 className="mt-1 text-3xl font-bold text-navy-900">The landscape in numbers</h1>
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {kpis.map(([label, value]) => (
             <div key={label} className="rounded-[10px] border border-ink-200 bg-white px-4 py-3">
               <div className="text-xs text-ink-500">{label}</div>
@@ -26,7 +27,7 @@ export default function DashboardPage() {
           ))}
         </div>
         <div className="mt-8">
-          <DashboardContent onHighlight={() => navigate('/')} />
+          <DashboardContent onHighlight={() => navigate('/')} onFocusSystem={(id) => navigate(`/?focus=system:${id}`)} />
         </div>
       </div>
     </div>

@@ -9,7 +9,7 @@ import type {
 } from '@/types/domain';
 import { DEFAULT_PLOTS } from './layout';
 
-export const SEED_VERSION = 1;
+export const SEED_VERSION = 2;
 const STAMP = '2026-10-01T09:00:00.000Z';
 const audit = { createdAt: STAMP, updatedAt: STAMP, archived: false };
 
@@ -19,13 +19,32 @@ const Z = (n: number) => uid('a0', n);
 const S = (n: number) => uid('b0', n);
 const I = (n: number) => uid('c0', n);
 
+/** Plot used by the Shared Services Hub: behind the container yard, central to the port. */
+export const SHARED_HUB_PLOT_ID = DEFAULT_PLOTS[9].id;
+export const SHARED_HUB_ZONE_ID = Z(7);
+
+export const sharedHubZone = (): Zone => ({
+  id: SHARED_HUB_ZONE_ID,
+  name: 'Shared Services Hub',
+  description: 'Enterprise-wide systems used across several divisions and not owned by any single one.',
+  color: '#0d9488',
+  theme: 'shared',
+  kind: 'shared',
+  plotId: SHARED_HUB_PLOT_ID,
+  scale: 1,
+  visible: true,
+  sortOrder: 7,
+  ...audit,
+});
+
 const zones: Zone[] = [
-  { id: Z(1), name: 'Trade Gateway', description: 'Trader-facing systems: declarations, trader profiles and eService payments.', color: '#2f7fe0', theme: 'trade', plotId: DEFAULT_PLOTS[2].id, scale: 1, visible: true, sortOrder: 1, ...audit },
-  { id: Z(2), name: 'Compliance Centre', description: 'Compliance rules, risk assessment, screening and inspection.', color: '#7c5ce0', theme: 'compliance', plotId: DEFAULT_PLOTS[1].id, scale: 1, visible: true, sortOrder: 2, ...audit },
-  { id: Z(3), name: 'Enforcement HQ', description: 'Investigation, case management and intelligence analytics.', color: '#ec7a1c', theme: 'enforcement', plotId: DEFAULT_PLOTS[0].id, scale: 1, visible: true, sortOrder: 3, ...audit },
-  { id: Z(4), name: 'Finance Treasury', description: 'Revenue collection, reconciliation and ledger interfaces.', color: '#23a35a', theme: 'finance', plotId: DEFAULT_PLOTS[3].id, scale: 1, visible: true, sortOrder: 4, ...audit },
-  { id: Z(5), name: 'Traveller Checkpoint', description: 'Traveller declarations and GST processing.', color: '#e9b414', theme: 'traveller', plotId: DEFAULT_PLOTS[4].id, scale: 1, visible: true, sortOrder: 5, ...audit },
-  { id: Z(6), name: 'Integration Hub', description: 'Shared integration, data exchange and cargo operations services.', color: '#2bb3c8', theme: 'integration', plotId: DEFAULT_PLOTS[5].id, scale: 1, visible: true, sortOrder: 6, ...audit },
+  { id: Z(1), name: 'Trade Gateway', description: 'Trader-facing systems: declarations, trader profiles and eService payments.', color: '#2f7fe0', theme: 'trade', kind: 'division', plotId: DEFAULT_PLOTS[2].id, scale: 1, visible: true, sortOrder: 1, ...audit },
+  { id: Z(2), name: 'Compliance Centre', description: 'Compliance rules, risk assessment, screening and inspection.', color: '#7c5ce0', theme: 'compliance', kind: 'division', plotId: DEFAULT_PLOTS[1].id, scale: 1, visible: true, sortOrder: 2, ...audit },
+  { id: Z(3), name: 'Enforcement HQ', description: 'Investigation, case management and intelligence analytics.', color: '#ec7a1c', theme: 'enforcement', kind: 'division', plotId: DEFAULT_PLOTS[0].id, scale: 1, visible: true, sortOrder: 3, ...audit },
+  { id: Z(4), name: 'Finance Treasury', description: 'Revenue collection, reconciliation and ledger interfaces.', color: '#23a35a', theme: 'finance', kind: 'division', plotId: DEFAULT_PLOTS[3].id, scale: 1, visible: true, sortOrder: 4, ...audit },
+  { id: Z(5), name: 'Traveller Checkpoint', description: 'Traveller declarations and GST processing.', color: '#e9b414', theme: 'traveller', kind: 'division', plotId: DEFAULT_PLOTS[4].id, scale: 1, visible: true, sortOrder: 5, ...audit },
+  { id: Z(6), name: 'Integration Hub', description: 'Shared integration, data exchange and cargo operations services.', color: '#2bb3c8', theme: 'integration', kind: 'division', plotId: DEFAULT_PLOTS[5].id, scale: 1, visible: true, sortOrder: 6, ...audit },
+  sharedHubZone(),
 ];
 
 type SysSeed = [n: number, zone: number, acronym: string, name: string, category: System['category'], status: System['status'], criticality: System['criticality'], purpose: string];
@@ -52,12 +71,18 @@ const sysSeeds: SysSeed[] = [
   [19, 6, 'VMI', 'Vessel Manifest Interface', 'External System', 'Planned', 'Medium', 'Exchanges load lists and manifests with shipping lines.'],
 ];
 
+// Common Data Repository is used beyond its owner but stays displayed in its own zone:
+// multiple users alone never move a system into the Shared Services Hub.
+const extraUsers: Record<number, number[]> = { 16: [3, 4] };
+
 const systems: System[] = sysSeeds.map(([n, zone, acronym, name, category, status, criticality, purpose]) => ({
   id: S(n),
   name,
   acronym,
   description: `${name} (placeholder for demonstration).`,
   zoneId: Z(zone),
+  owningZoneId: Z(zone),
+  usingZoneIds: [Z(zone), ...(extraUsers[n] ?? []).map(Z)],
   businessPurpose: purpose,
   category,
   status,
@@ -65,6 +90,26 @@ const systems: System[] = sysSeeds.map(([n, zone, acronym, name, category, statu
   docs: [],
   ...audit,
 }));
+
+export const SHARED_DEMO_SYSTEM_ID = S(20);
+
+/** Illustrative cross-division system: one record, one building, three using divisions. */
+export const sharedDemoSystem = (): System => ({
+  id: SHARED_DEMO_SYSTEM_ID,
+  name: 'Shared Case Management System',
+  acronym: 'SCMS',
+  description: 'Illustrative demonstration data: a case management platform shared by trade, compliance and enforcement teams.',
+  zoneId: SHARED_HUB_ZONE_ID,
+  owningZoneId: null,
+  usingZoneIds: [Z(1), Z(2), Z(3)],
+  businessPurpose: 'Demonstration only. One case record that several divisions work on, instead of each division keeping its own copy.',
+  category: 'Core Processing',
+  status: 'In Development',
+  criticality: 'High',
+  docs: [],
+  ...audit,
+});
+systems.push(sharedDemoSystem());
 
 type IntSeed = [n: number, from: number, to: number, name: string, dataType: Integration['dataType'], mechanism: Integration['mechanism'], trigger: string, description: string, via?: number[], extra?: Partial<Integration>];
 

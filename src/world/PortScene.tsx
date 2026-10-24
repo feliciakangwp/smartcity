@@ -11,6 +11,7 @@ import { useHighlight } from './useHighlight';
 import { useWorldLayout } from './useWorldLayout';
 import { CameraRig, HOME } from './CameraRig';
 import { IntegrationLines } from './IntegrationLines';
+import { UsageLines } from './UsageLines';
 import { MaritimeSimProvider, useSim } from './maritime/SimContext';
 import { Ship } from './maritime/Ship';
 import { ApronBuffer, QuayCrane } from './maritime/QuayCrane';
@@ -69,6 +70,7 @@ export function PortScene() {
           <Maritime />
           <RoadTraffic />
           <IntegrationLines />
+          <UsageLines />
           <CameraRig />
         </MaritimeSimProvider>
       </Suspense>
@@ -90,7 +92,7 @@ function Districts() {
   const { layouts, placements } = useWorldLayout();
   const showLabels = useWorld((s) => s.showLabels);
   const selection = useWorld((s) => s.selection);
-  const { tone, zoneDimmed } = useHighlight();
+  const { tone, zoneDimmed, zoneEmphasised } = useHighlight();
   const byZone = useMemo(() => {
     const m = new Map<string, ReturnType<typeof placements.get>[]>();
     for (const p of placements.values()) {
@@ -112,7 +114,7 @@ function Districts() {
             layout={l}
             placements={list}
             dimmed={zoneDimmed(l.zone.id)}
-            selected={selection?.kind === 'zone' && selection.id === l.zone.id}
+            selected={(selection?.kind === 'zone' && selection.id === l.zone.id) || zoneEmphasised(l.zone.id)}
             tones={tones}
             showLabels={showLabels}
           />

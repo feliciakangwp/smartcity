@@ -241,6 +241,60 @@ function SortingConveyor({ w, d, color, dim }: ThemeProps) {
   );
 }
 
+/** Shared technology campus: glass atrium, green-roofed wings, skybridge and a data spire. */
+function SharedCampus({ w, d, color, dim }: ThemeProps) {
+  const ring = useRef<THREE.Mesh>(null);
+  const halo = useRef<THREE.Mesh>(null);
+  useFrame(({ clock }) => {
+    if (!ambientOn()) return;
+    const t = clock.elapsedTime;
+    if (ring.current) ring.current.position.y = 2 + ((t * 0.35) % 1) * 9;
+    if (halo.current) (halo.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.6 + Math.sin(t * 2) * 0.35;
+  });
+  const o = dim ? 0.35 : undefined;
+  const glass = mat(C.glass, { opacity: o ?? 0.85, roughness: 0.08, metalness: 0.35 });
+  const green = mat('#6dbb6a', { opacity: o, roughness: 0.95 });
+  return (
+    <group>
+      <Cyl r={w * 0.46} h={0.06} p={[0, 0.03, 0]} m={mat(tint(color, '#ffffff', 0.55), { opacity: o })} />
+      {/* Atrium */}
+      <Cyl r={3.4} h={4.2} p={[0, 2.1, 0]} m={glass} />
+      <Cyl r={3.7} h={0.35} p={[0, 4.35, 0]} m={mat(color, { opacity: o })} />
+      <Cyl r={2.4} h={1.6} p={[0, 5.3, 0]} m={glass} />
+      <Cyl r={2.6} h={0.25} p={[0, 6.2, 0]} m={mat(color, { opacity: o })} />
+      {/* Wings with green roofs and a skybridge */}
+      {[-1, 1].map((k) => (
+        <group key={k} position={[k * w * 0.3, 0, -d * 0.05]}>
+          <B s={[w * 0.22, 3.2, d * 0.55]} p={[0, 1.6, 0]} m={mat(C.white, { opacity: o, map: undefined })} />
+          <B s={[w * 0.225, 0.4, d * 0.56]} p={[0, 1.1, 0]} m={mat(C.glass, { opacity: o ?? 0.9, roughness: 0.15 })} />
+          <B s={[w * 0.2, 0.25, d * 0.5]} p={[0, 3.32, 0]} m={green} />
+          <B s={[w * 0.08, 1.2, 1.4]} p={[-k * w * 0.13, 2.6, 0]} m={glass} />
+        </group>
+      ))}
+      {/* Data spire with a rising light ring */}
+      <group position={[w * 0.42, 0, d * 0.2]}>
+        <Cyl r={0.35} h={12} p={[0, 6, 0]} m={mat('#dfe7ee', { opacity: o })} />
+        <mesh ref={halo} position={[0, 12.3, 0]} scale={0.7}>
+          <sphereGeometry args={[1, 14, 10]} />
+          <meshStandardMaterial color="#9ff0e6" emissive={color} emissiveIntensity={0.8} transparent opacity={dim ? 0.3 : 1} />
+        </mesh>
+        <mesh ref={ring} position={[0, 2, 0]} rotation-x={Math.PI / 2}>
+          <torusGeometry args={[1.1, 0.12, 6, 24]} />
+          <meshStandardMaterial color="#c9fff7" emissive={color} emissiveIntensity={1.2} transparent opacity={dim ? 0.2 : 0.85} />
+        </mesh>
+      </group>
+      {[-0.42, -0.2, 0.2].map((f) => (
+        <group key={f} position={[f * w, 0, d * 0.32]}>
+          <Cyl r={0.18} h={1.4} p={[0, 0.7, 0]} m={mat('#7a5a3a', { opacity: o })} />
+          <mesh position={[0, 2.1, 0]} material={mat('#4f9b57', { opacity: o })} castShadow>
+            <icosahedronGeometry args={[1.1, 1]} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
 function Parking({ w, d, dim }: ThemeProps) {
   const o = dim ? 0.35 : undefined;
   return (
@@ -260,6 +314,7 @@ const THEMES: Record<ZoneTheme, (p: ThemeProps) => JSX.Element> = {
   finance: TreasuryPlaza,
   traveller: TravellerCanopy,
   integration: SortingConveyor,
+  shared: SharedCampus,
   generic: Parking,
 };
 

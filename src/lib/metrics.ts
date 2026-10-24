@@ -19,6 +19,30 @@ export const activeIntegrations = (ints: Integration[], systems: System[]) => {
   return ints.filter((i) => !i.archived && ids.has(i.sourceId) && ids.has(i.destinationId));
 };
 
+// ---------- ownership and usage ----------
+export const divisionZones = (zones: Zone[]) => activeZones(zones).filter((z) => z.kind === 'division');
+
+/** Using divisions that are still active divisions. */
+export function usingDivisions(s: System, zones: Zone[]) {
+  const ok = new Set(divisionZones(zones).map((z) => z.id));
+  return s.usingZoneIds.filter((id) => ok.has(id));
+}
+/** Owning division if it is still an active division, otherwise null (unassigned). */
+export function owningDivision(s: System, zones: Zone[]) {
+  return s.owningZoneId && divisionZones(zones).some((z) => z.id === s.owningZoneId) ? s.owningZoneId : null;
+}
+/** Derived, never stored: a system is shared when two or more divisions use it. */
+export const isShared = (s: System, zones: Zone[]) => usingDivisions(s, zones).length >= 2;
+export const inSharedZone = (s: System, zones: Zone[]) => zones.some((z) => z.id === s.zoneId && z.kind === 'shared');
+
+export type SystemFilter = 'all' | 'owned' | 'shared' | 'unassigned';
+export function matchesFilter(s: System, zones: Zone[], f: SystemFilter) {
+  if (f === 'owned') return owningDivision(s, zones) !== null;
+  if (f === 'unassigned') return owningDivision(s, zones) === null;
+  if (f === 'shared') return isShared(s, zones) || inSharedZone(s, zones);
+  return true;
+}
+
 const countBy = <T,>(items: T[], key: (t: T) => string, order: readonly string[]) =>
   order.map((name) => ({ name, value: items.filter((i) => key(i) === name).length }));
 
@@ -36,12 +60,30 @@ export function summarise(l: Landscape) {
     degree.get(i.destinationId)!.in++;
   }
 
+  const divisions = divisionZones(l.zones);
+  const shared = systems.filter((s) => isShared(s, l.zones) || inSharedZone(s, l.zones));
+  const multiUse = systems.filter((s) => isShared(s, l.zones));
+  // Usage by a division other than the owner (unassigned owners count every user).
+  const crossUsage = systems.flatMap((s) => usingDivisions(s, l.zones).filter((z) => z !== owningDivision(s, l.zones)).map((z) => ({ system: s, zoneId: z })));
+
   return {
     zones,
     systems,
     integrations,
     journeys,
+    shared,
+    multiUse,
+    byOwner: [
+      ...divisions.map((z) => ({ name: z.name, value: systems.filter((s) => owningDivision(s, l.zones) === z.id).length, color: z.color })),
+      { name: 'Unassigned', value: systems.filter((s) => owningDivision(s, l.zones) === null).length, color: '#94a3b8' },
+    ],
+    crossUsageByDivision: divisions
+      .map((z) => ({ name: z.name, value: crossUsage.filter((c) => c.zoneId === z.id).length, color: z.color }))
+      .filter((d) => d.value > 0),
     totals: {
+      sharedSystems: shared.length,
+      multiDivision: multiUse.length,
+      crossDivisionUsage: crossUsage.length,
       zones: zones.length,
       systems: systems.length,
       integrations: integrations.length,

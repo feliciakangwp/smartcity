@@ -49,7 +49,8 @@ export const DEFAULT_PLOTS: ZonePlot[] = [
   plot(7, -150, -138, 1),
   plot(8, -95, -138, 1),
   plot(9, -40, -138, 1),
-  plot(10, 45, -104, 1),
+  // Central plot behind the container yard, open from the start for the Shared Services Hub.
+  plot(10, 45, -104, 0),
   plot(11, 110, -104, 1),
   plot(12, 175, -104, 1),
   plot(13, -205, -34, 2),

@@ -96,6 +96,7 @@ export default function AdminZones() {
                     <div className="flex items-center gap-2">
                       <ZoneSwatch color={z.color} />
                       <span className="font-semibold">{z.name}</span>
+                      {z.kind === 'shared' && <Chip color={z.color}>Shared services</Chip>}
                       {z.archived && <Chip>Archived</Chip>}
                     </div>
                     <div className="max-w-[360px] truncate text-xs text-ink-500">{z.description}</div>
@@ -173,8 +174,8 @@ function ZoneForm({ zone, onSave, onCancel }: { zone: Zone | null; onSave: (z: N
   const options = availablePlots(plots, zones, rings, zone?.id);
   const [v, setV] = useState<NewZone>(
     zone
-      ? { name: zone.name, description: zone.description, color: zone.color, theme: zone.theme, plotId: zone.plotId, scale: zone.scale, visible: zone.visible }
-      : { name: '', description: '', color: PRESETS[6], theme: 'generic', plotId: options[0]?.id ?? '', scale: 1, visible: true },
+      ? { name: zone.name, description: zone.description, color: zone.color, theme: zone.theme, kind: zone.kind, plotId: zone.plotId, scale: zone.scale, visible: zone.visible }
+      : { name: '', description: '', color: PRESETS[6], theme: 'generic', kind: 'division', plotId: options[0]?.id ?? '', scale: 1, visible: true },
   );
   const [error, setError] = useState('');
 
@@ -237,6 +238,13 @@ function ZoneForm({ zone, onSave, onCancel }: { zone: Zone | null; onSave: (z: N
       <label className="flex flex-col gap-1">
         <span className="label">Size within plot: {Math.round(v.scale * 100)}%</span>
         <input id="zone-scale" type="range" min={0.6} max={1} step={0.05} value={v.scale} onChange={(e) => setV({ ...v, scale: Number(e.target.value) })} className="accent-navy-800" />
+      </label>
+      <label className="flex items-start gap-2 text-sm">
+        <input id="zone-kind" type="checkbox" checked={v.kind === 'shared'} onChange={(e) => setV({ ...v, kind: e.target.checked ? 'shared' : 'division' })} className="mt-0.5 h-4 w-4 accent-navy-800" />
+        <span>
+          Shared services zone
+          <span className="block text-xs text-ink-500">Displays cross-division systems. It is not a division, so it cannot own or use systems.</span>
+        </span>
       </label>
       <label className="inline-flex items-center gap-2 text-sm">
         <input id="zone-visible" type="checkbox" checked={v.visible} onChange={(e) => setV({ ...v, visible: e.target.checked })} className="h-4 w-4 accent-navy-800" />

@@ -3,7 +3,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Eye, Home, Maximize, Minimize, Pause, RotateCcw, Search, Ship, Spline, Tags } from 'lucide-react';
 import { useLandscape } from '@/store/landscape';
 import { useWorld, type Speed } from '@/store/world';
-import { activeSystems, activeZones } from '@/lib/metrics';
+import { activeSystems, activeZones, matchesFilter, type SystemFilter } from '@/lib/metrics';
 import { DATA_TYPE_COLORS, DATA_TYPES } from '@/types/domain';
 import { IconButton, ZoneSwatch, cx } from '@/components/ui';
 
@@ -161,8 +161,55 @@ export function SimControls() {
   );
 }
 
+const FILTERS: { value: SystemFilter; label: string }[] = [
+  { value: 'all', label: 'All systems' },
+  { value: 'owned', label: 'Division-owned' },
+  { value: 'shared', label: 'Shared' },
+  { value: 'unassigned', label: 'Unassigned' },
+];
+
+/** Systems view filter plus the cross-division relationships toggle. */
+export function SystemsViewFilter() {
+  const filter = useWorld((s) => s.systemFilter);
+  const setFilter = useWorld((s) => s.setSystemFilter);
+  const showCross = useWorld((s) => s.showCrossDivision);
+  const toggle = useWorld((s) => s.toggle);
+  const select = useWorld((s) => s.select);
+  const zones = useLandscape((s) => s.zones);
+  const systems = useLandscape((s) => s.systems);
+  const live = activeSystems(systems, zones);
+  const count = (f: SystemFilter) => live.filter((x) => matchesFilter(x, zones, f)).length;
+  return (
+    <div className="panel pointer-events-auto flex flex-col gap-1.5 px-3 py-2">
+      <span className="eyebrow">Systems view</span>
+      <div className="flex flex-wrap rounded-md border border-ink-200 p-0.5" role="radiogroup" aria-label="Filter systems">
+        {FILTERS.map((f) => (
+          <button
+            key={f.value}
+            type="button"
+            role="radio"
+            aria-checked={filter === f.value}
+            onClick={() => {
+              setFilter(f.value);
+              select(null);
+            }}
+            className={cx('rounded px-2 py-1 text-xs font-semibold', filter === f.value ? 'bg-navy-800 text-white' : 'text-ink-700 hover:bg-ink-100')}
+          >
+            {f.label} <span className="num opacity-70">{count(f.value)}</span>
+          </button>
+        ))}
+      </div>
+      <label className="inline-flex items-center gap-2 text-xs text-ink-700">
+        <input id="toggle-cross-division" type="checkbox" checked={showCross} onChange={() => toggle('showCrossDivision')} className="h-3.5 w-3.5 accent-navy-800" />
+        Show cross-division relationships
+      </label>
+    </div>
+  );
+}
+
 export function DataTypeLegend() {
-  const show = useWorld((s) => s.showLines || s.selection?.kind === 'system' || !!s.impactSystemId);
+  const show = useWorld((s) => s.showLines || s.selection?.kind === 'system' || !!s.impactSystemId || s.showCrossDivision);
+  const usage = useWorld((s) => s.selection?.kind === 'system' || s.showCrossDivision);
   if (!show) return null;
   return (
     <div className="panel pointer-events-auto px-3 py-2">
@@ -179,6 +226,15 @@ export function DataTypeLegend() {
           Planned
         </li>
       </ul>
+      {usage && (
+        <>
+          <div className="eyebrow mb-1 mt-2">Division usage (not an integration)</div>
+          <div className="flex items-center gap-2 text-xs text-ink-700">
+            <span className="h-[3px] w-5 rounded" style={{ background: 'repeating-linear-gradient(90deg,#0d9488 0 3px,transparent 3px 5px)' }} />
+            Flowing dashes in the using division's colour
+          </div>
+        </>
+      )}
     </div>
   );
 }

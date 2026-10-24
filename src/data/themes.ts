@@ -7,5 +7,6 @@ export const THEME_LABELS: Record<ZoneTheme, string> = {
   finance: 'Finance (treasury plaza)',
   traveller: 'Traveller (passenger checkpoint)',
   integration: 'Integration (sorting & transfer)',
+  shared: 'Shared services (technology campus)',
   generic: 'General facility',
 };
