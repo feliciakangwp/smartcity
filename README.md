@@ -22,6 +22,16 @@ npm run dev          # http://localhost:5173
 | `npm run sim:check` | Run the maritime simulation headlessly for 20 simulated minutes and print every ship state change |
 | `npm run gen:seed-sql` | Regenerate `supabase/seed.sql` from the demo seed |
 
+### Publishing on GitHub Pages
+
+This is a Vite app, so GitHub Pages must serve the **built** files, not the repository itself. Serving the repo as-is gives a blank page, because the browser cannot run `src/main.tsx`.
+
+1. In the repository go to **Settings → Pages → Build and deployment → Source** and choose **GitHub Actions**.
+2. Push to `main` or `claude/nifty-brahmagupta-u20t59`, or run **Actions → Deploy to GitHub Pages → Run workflow**.
+3. The site is published at `https://<owner>.github.io/<repo>/`.
+
+`.github/workflows/deploy-pages.yml` builds with `VITE_BASE=/<repo>/`, so asset paths and routes work under the repository path. It also copies `index.html` to `404.html`, so refreshing a page such as `/dashboard` works.
+
 ### Demo Mode vs shared data
 
 With no Supabase credentials the app runs in **Demo Mode**. It uses the built-in seed data (6 zones, 19 placeholder systems, 19 integrations, 4 journeys, 3 ships) and saves every change to **this browser's localStorage only**. A badge in the header says so. Demo Mode is for trying things out; it is not a multi-user backend.
