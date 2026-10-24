@@ -1,0 +1,74 @@
+// UI state for the Port World: selection, camera focus, toggles, simulation speed.
+import { create } from 'zustand';
+
+export type SelectionKind = 'zone' | 'system' | 'ship';
+export interface Selection {
+  kind: SelectionKind;
+  id: string;
+}
+export type FocusKind = 'home' | 'zone' | 'system' | 'ship';
+export interface FocusRequest {
+  kind: FocusKind;
+  id?: string;
+  nonce: number;
+}
+export type Speed = 0 | 1 | 2 | 4;
+export type ResolvedQuality = 'low' | 'medium' | 'high';
+
+interface WorldState {
+  selection: Selection | null;
+  hovered: string | null;
+  focus: FocusRequest;
+  showLabels: boolean;
+  showLines: boolean;
+  showAmbient: boolean;
+  speed: Speed;
+  dashboardExpanded: boolean;
+  impactSystemId: string | null;
+  quality: ResolvedQuality;
+  /** Zone the Add System dialog is open for. */
+  addSystemZone: string | null;
+
+  openAddSystem: (zoneId: string | null) => void;
+  select: (s: Selection | null, focus?: boolean) => void;
+  setHovered: (id: string | null) => void;
+  focusOn: (kind: FocusKind, id?: string) => void;
+  toggle: (key: 'showLabels' | 'showLines' | 'showAmbient') => void;
+  setSpeed: (s: Speed) => void;
+  setDashboardExpanded: (v: boolean) => void;
+  setImpactSystem: (id: string | null) => void;
+  setQuality: (q: ResolvedQuality) => void;
+}
+
+const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px), (pointer: coarse)').matches;
+
+export const useWorld = create<WorldState>()((set) => ({
+  selection: null,
+  hovered: null,
+  focus: { kind: 'home', nonce: 0 },
+  showLabels: true,
+  showLines: false,
+  showAmbient: true,
+  speed: 1,
+  dashboardExpanded: false,
+  impactSystemId: null,
+  quality: isMobile ? 'low' : 'high',
+  addSystemZone: null,
+
+  openAddSystem: (addSystemZone) => set({ addSystemZone }),
+
+  select: (selection, focus = false) =>
+    set((s) => ({
+      selection,
+      focus: focus && selection ? { kind: selection.kind, id: selection.id, nonce: s.focus.nonce + 1 } : s.focus,
+    })),
+  setHovered: (hovered) => set({ hovered }),
+  focusOn: (kind, id) => set((s) => ({ focus: { kind, id, nonce: s.focus.nonce + 1 } })),
+  toggle: (key) => set((s) => ({ [key]: !s[key] }) as Partial<WorldState>),
+  setSpeed: (speed) => set({ speed }),
+  setDashboardExpanded: (dashboardExpanded) => set({ dashboardExpanded }),
+  setImpactSystem: (impactSystemId) => set({ impactSystemId }),
+  setQuality: (quality) => set({ quality }),
+}));
+
+export const isMobileDevice = isMobile;
