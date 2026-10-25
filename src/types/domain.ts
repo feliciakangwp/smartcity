@@ -68,6 +68,16 @@ export type SystemStatus = (typeof SYSTEM_STATUSES)[number];
 export const CRITICALITIES = ['Low', 'Medium', 'High', 'Mission Critical'] as const;
 export type Criticality = (typeof CRITICALITIES)[number];
 
+/** A part of a larger system (e.g. one of eCustoms' modules) with its own users. */
+export interface SystemModule {
+  id: ID;
+  name: string;
+  usingZoneIds: ID[];
+}
+
+/** Systems older than this many years are drawn as legacy buildings. */
+export const LEGACY_AGE_YEARS = 5;
+
 export interface DocLink {
   label: string;
   url: string;
@@ -94,6 +104,12 @@ export interface System extends Audited {
   docs: DocLink[];
   /** Slot inside the zone; undefined = auto-place. */
   slot?: number;
+  /** Year the system went live (or is planned to). Drives the legacy / modern look. */
+  yearIntroduced?: number;
+  /** Development progress 0–100 for Planned / In Development systems. */
+  buildProgress?: number;
+  /** Optional modules, each with its own using divisions. One building still represents the system. */
+  modules?: SystemModule[];
 }
 
 export const MECHANISMS = [
@@ -165,6 +181,8 @@ export interface Journey extends Audited {
 export interface ShipConfig {
   id: ID;
   name: string;
+  /** Port the vessel calls at. */
+  portId: string;
   hullColor: string;
   /** Number of container bays along the hull. */
   bays: number;
@@ -179,6 +197,7 @@ export interface ShipConfig {
 export interface Berth {
   id: ID;
   name: string;
+  portId: string;
   x: number;
 }
 

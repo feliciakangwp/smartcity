@@ -63,7 +63,7 @@ export const ZoneDistrict = memo(function ZoneDistrict({ layout, placements, dim
             sub={`${placements.length} system${placements.length === 1 ? '' : 's'}`}
             border={zone.color}
             size="lg"
-            height={selected ? 0.05 : 0.04}
+            height={selected ? 0.04 : 0.03}
             opacity={dimmed ? 0.5 : 1}
           />
         )}

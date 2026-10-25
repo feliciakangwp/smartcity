@@ -2,9 +2,9 @@
 
 **Connecting Systems. Moving Information.**
 
-Port Nexus is a 3D ICT landscape shown as a living seaport. Buildings are ICT systems, districts are organisational divisions, and moving cargo stands for information flowing between systems. The world is drawn from data, so zones, systems and integrations added in the Port Management Studio appear in the port straight away.
+Port Nexus is a 3D ICT landscape drawn as a stylised Singapore. Buildings are ICT systems, districts are organisational divisions, and moving cargo stands for information flowing between systems. Container ports at Tuas and Queenstown, Changi Airport and the expressways run on a simulated timetable. The world is drawn from data, so zones, systems and integrations added in the Port Management Studio appear straight away.
 
-> **Status: Phase 1 complete, plus parts of Phase 2.** See [Roadmap](#roadmap) for what is done and what is next.
+> **Status: Phase 1 complete, plus parts of Phases 2 and 5.** See [Roadmap](#roadmap) for what is done and what is next.
 
 ## Quick start
 
@@ -19,7 +19,8 @@ npm run dev          # http://localhost:5173
 | `npm run build` | Type-check and build to `dist/` |
 | `npm run preview` | Serve the production build |
 | `npm run typecheck` | TypeScript only |
-| `npm run sim:check` | Run the maritime simulation headlessly for 20 simulated minutes and print every ship state change |
+| `npm run sim:check` | Run the shipping, road and airport simulations headlessly for 20 simulated minutes and print a summary |
+| `npm run layout:check` | Check the map: plots on land and clear of roads, ports and the airport; ship waypoints in water |
 | `npm run gen:seed-sql` | Regenerate `supabase/seed.sql` from the demo seed |
 
 ### Publishing on GitHub Pages
@@ -34,7 +35,7 @@ This is a Vite app, so GitHub Pages must serve the **built** files, not the repo
 
 ### Demo Mode vs shared data
 
-With no Supabase credentials the app runs in **Demo Mode**. It uses the built-in seed data (6 zones, 19 placeholder systems, 19 integrations, 4 journeys, 3 ships) and saves every change to **this browser's localStorage only**. A badge in the header says so. Demo Mode is for trying things out; it is not a multi-user backend.
+With no Supabase credentials the app runs in **Demo Mode**. It uses the built-in seed data (6 zones, 10 systems, 6 ships, 4 berths) and saves every change to **this browser's localStorage only**. Integrations and journeys start empty: the earlier placeholder ones referred to systems that were removed, and links between the real systems have not been recorded yet. A badge in the header says so. Demo Mode is for trying things out; it is not a multi-user backend.
 
 To prepare for the shared database, copy `.env.example` to `.env` and set the project URL and **anon** key:
 
@@ -66,7 +67,8 @@ The migration and seed were checked against PostgreSQL 16:
 ## Using the Port World
 
 - **Navigate:** drag to rotate, scroll to zoom, right-drag (or two-finger drag) to pan. The toolbar has **Home view**, **Reset**, **Labels**, **Integration lines**, **Ambient animations** and **Fullscreen**.
-- **Search** for a zone, system acronym or ship to fly the camera to it.
+- **Search** for a zone, system acronym, ship or place (Tuas Port, Queenstown Port, Changi Airport) to fly the camera to it.
+- **Operations schedule** (right-hand panel, calendar button in the toolbar): flight arrivals and aircraft at gates, each port's berths, ships waiting at anchorage, inbound ships and ships at sea, and the next truck departures. It is a simulated timetable, not live data.
 - **Click a zone** to focus it. Other zones are subdued and the panel lists its systems, with **Add system**.
 - **Click a building** to open its system panel: purpose, owner, incoming and outgoing integrations, **View data flow** and **View impact**. Connected systems light up and their integration arcs appear. **Double-click** to fly in.
 - **Click a ship** to see its voyage state, berth and cargo counts. **Follow vessel** keeps the camera on it.
@@ -85,19 +87,57 @@ Each system has three separate zone fields:
 | **Using divisions** | Any number of divisions that use the system. These can differ from the owner. |
 | **Display zone** | Where the building stands. It defaults to the owner and can be any zone, including a shared services zone. |
 
-**Shared system** is calculated, never stored: a system is shared when two or more divisions use it. Having several users never moves a system automatically. The Common Data Repository is a demo example: it is shared but still stands in its owner's zone.
+**Shared system** is calculated, never stored: a system is shared when two or more divisions use it. Having several users never moves a system automatically.
 
-- **Shared Services Hub:** an ordinary zone whose kind is *shared services*, on the central plot behind the container yard. It is edited, moved or archived in **Studio → Zones**, and any zone can be marked as shared services. A shared zone displays systems but cannot own or use them.
+**Modules:** a system can be split into modules, each with its own using divisions (for example eCustoms' 13 modules). It is still one record and one building, drawn as a campus with a pod per module. Clicking a pod, or a module in the side panel, highlights only that module's divisions. The system's users are everyone who uses any module.
+
+- **Shared Services Hub:** an ordinary zone whose kind is *shared services*, beside the Trade zone. It is edited, moved or archived in **Studio → Zones**, and any zone can be marked as shared services. A shared zone displays systems but cannot own or use them.
 - **In the Port World:** selecting a system lights its building and every zone that uses it, and draws **flowing dashed lines in each division's colour** to those zones. Unrelated zones dim. These usage lines are deliberately different from integration arcs (solid, coloured by data type). A division using a system is not shown as an integration unless one is configured.
 - **Systems view filter** (bottom of the Port World): All, Division-owned, Shared or Unassigned. It has an optional **Show cross-division relationships** toggle.
 - **Dashboard:**
   - figures for total shared systems, systems used across multiple divisions, and cross-division usage
   - systems by owning division, and cross-division usage by division
   - a shared systems table (click a system to fly to it)
-- **Demo data:** *Shared Case Management System (SCMS)* is illustrative. It is unassigned, used by Trade Gateway, Compliance Centre and Enforcement HQ, and displayed in the Shared Services Hub.
 - **Existing data:**
-  - **Saved demo data** is upgraded automatically from version 1. Each system's zone becomes its display zone, owner and first user, and nothing you edited is overwritten. JSON imports from older versions go through the same upgrade.
+  - **Saved demo data** from before the Singapore layout restarts from the new seed, because the old plots no longer exist (branding settings are kept). JSON imports from older versions are normalised to the current model.
   - **Database:** `supabase/migrations/20261025000000_shared_systems.sql` renames `systems.zone_id` to `display_zone_id`, keeping its values, foreign key and policies. It adds `owning_zone_id` (filled from the current zone only where no owner is set), `zones.kind`, and the `system_division_usage` table. That table has a unique key on (system, zone), triggers that allow only divisions to own or use systems, row-level security and audit logging. The migration is idempotent. It was tested on PostgreSQL 16 both upgrading a Phase 1 database (all system IDs and integrations kept) and on a fresh database.
+  - **Database (Singapore update):** `supabase/migrations/20261026000000_singapore_layout_and_modules.sql` adds `systems.year_introduced` and `build_progress`, the `system_modules` and `system_module_usage` tables (division-only, row-level security, audit), and `port_id` on berths and ships. It also allows acronyms such as `TradeNet5.0` and `Customs@SG`, unique regardless of case. It is idempotent and keeps existing rows. It was tested on PostgreSQL 16 on an upgraded database and on a fresh one.
+
+## The Singapore layout
+
+The map is traced from a reference map of Singapore (`src/data/layout.ts`): map pixels convert to world units, north is up (−z) and the Singapore Strait faces the camera.
+
+| Where | What |
+| --- | --- |
+| Tuas (west) and Queenstown / Pasir Panjang (south) | The two container ports. Each has 2 berths, quay cranes, a yard and 3 ships. |
+| Tuas → Pioneer → Jurong → Queenstown | Port highway with container shuttles between the two ports |
+| Pioneer | Compliance Centre and Enforcement HQ |
+| Between Bukit Timah and Serangoon | Trade Gateway, with the Shared Services Hub (eCustoms) beside it |
+| Marina / CBD | Finance Treasury (location not given in the brief; easy to move in Studio → Zones) |
+| Changi | Changi Airport and the Traveller Checkpoint |
+
+Spare plots open with **Expand port map**: Jurong West, Sembawang, Ang Mo Kio and Pasir Ris.
+
+### Timetabled activity (simulated)
+
+- **Ships:** each port has 2 berths and 3 ships, so at busy times one waits at anchorage. Ships approach from the strait, berth, unload and load, then leave.
+- **Port shuttles:** a container truck leaves every 9 seconds, alternating Tuas → Queenstown and Queenstown → Tuas. The container moves from one yard to the other.
+- **Deliveries:** a truck leaves a port every 4.5 seconds for a town (Woodlands, Punggol, Bedok, CBD and others), unloads and drives back. Trucks keep left.
+- **Flights:** an arrival every 22 seconds lands on the western runway, taxis to one of 4 gates and stays about 28 seconds. Ten passengers walk from the gate through the Traveller Checkpoint counters, then the aircraft departs from the eastern runway.
+
+### System age and build progress
+
+Each system has a **go-live year** and, while in development, a **build progress**:
+
+| State | How the building looks |
+| --- | --- |
+| Live and older than 5 years | Legacy: weathered cream walls, faded colours, stains, a crack, a rusty roof tank, wall air-conditioners |
+| Live and 5 years old or less | Modern: bright glass, glowing trim, rooftop solar panels |
+| Planned / In Development, 0% | Fenced empty site with a sign |
+| 1–10% | Foundation slab with rebar |
+| Over 10% | Built up to that share of its height, with scaffolding, a ghost of the finished volume and a tower crane |
+
+The demo's go-live years and the eCustoms module names and usage are **placeholders** to confirm in the System Registry.
 
 ## Routes
 
@@ -123,24 +163,30 @@ The admin pages and the 3D world are lazy-loaded, so the Studio does not downloa
 src/
   types/domain.ts          Records shared by the demo store and the database
   data/
-    seed.ts                Demo zones, placeholder systems, integrations, journeys A–D, ships, berths
-    layout.ts              World geometry: plots, quay, cranes, yard, roads, shipping lanes
+    seed.ts                Demo zones, systems, eCustoms modules, ships, berths
+    layout.ts              Singapore outline, ports, airport, expressway graph, plots, shipping lanes
+    upgrade.ts             Normalises imported landscapes to the current model
     themes.ts              Zone facility-type labels
   lib/
     datasource.ts          Demo Mode / Supabase detection (anon client only)
     placement.ts           Zone layouts and building slots (pure functions)
-    metrics.ts             Dashboard figures and impact analysis, all from stored records
+    metrics.ts             Dashboard figures, ownership/usage and impact analysis, all from stored records
+    systemAge.ts           Legacy / modern / under-construction state from year, status and progress
   store/
     landscape.ts           Zustand store for records + actions, persisted in Demo Mode
     world.ts               UI state: selection, camera focus, toggles, speed, quality
-  sim/maritime.ts          Ambient shipping simulation (plain TypeScript, no React)
+  sim/
+    maritime.ts            Shipping at both ports (plain TypeScript, no React)
+    logistics.ts           Timetabled port shuttles and town deliveries on the expressways
+    airport.ts             Timetabled flights and travellers through the checkpoint
   world/                   React Three Fiber scene
     PortScene.tsx          Canvas, lights, sky, adaptive quality
     Ocean.tsx              Wave shader (+ matching JS wave function for bobbing)
-    Terrain.tsx            Land, quay, roads, trees, breakwater, lighthouse, buoys
+    Terrain.tsx            Island, port terminals, expressways, town blocks, trees, place names, buoys
+    airport/               Changi runways, terminal, aircraft and travellers
     ZoneDistrict.tsx       Zone slab, landmark, buildings, label
     zoneThemes.tsx         Landmarks: entry gates, scanning gantry, secure compound, plaza, canopy, conveyor
-    buildings/             One procedural building type per system category
+    buildings/             Building type per category; legacy, modern and construction looks; module campus
     maritime/              Ships, quay cranes, apron, container yard, trucks, sim context
     CameraRig.tsx          Smooth flights and ship following
     IntegrationLines.tsx   Arcs between buildings coloured by data type
@@ -149,7 +195,7 @@ src/
 supabase/
   migrations/              Schema, constraints, indexes, triggers, RLS, storage bucket
   seed.sql                 Generated from src/data/seed.ts
-scripts/                   Seed SQL generator, headless simulation check
+scripts/                   Seed SQL generator, headless simulation check, layout check
 ```
 
 ### Maritime simulation
@@ -168,7 +214,8 @@ scripts/                   Seed SQL generator, headless simulation check
   
   Loading runs the same sequence in reverse.
 - **Trucks:** they collect unloaded containers from the apron and drive them to the yard. During loading they bring export containers from the yard. The yard's instanced stacks grow and shrink with these moves.
-- **Ambient traffic:** yard gantries and district road traffic run independently.
+- **Ports:** each berth, ship and yard belongs to Tuas or Queenstown; ships only use their own port's berths.
+- **Road logistics and the airport** run on their own timetables (`sim/logistics.ts`, `sim/airport.ts`). Port shuttles move containers between the two yards.
 
 ICT data flows (Phase 3) will be a separate layer and do not touch this simulation.
 
@@ -219,6 +266,8 @@ ICT data flows (Phase 3) will be a separate layer and do not touch this simulati
 ### Phase 5: Advanced capabilities
 - [x] Impact analysis (upstream and downstream, highlighted in the world)
 - [x] Cross-division shared systems: ownership vs usage, Shared Services Hub, filter, dashboard, migration
+- [x] Singapore layout: two ports, port highway, Changi Airport, timetabled ships, trucks, flights and travellers
+- [x] System go-live year and build progress (legacy, modern and under-construction looks); system modules
 - [ ] Conditional journey builder UI
 - [ ] Expanded analytics
 - [ ] Editable vessels, routes, berth assignments and cargo operations

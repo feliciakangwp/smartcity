@@ -4,7 +4,8 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CONTAINER_COLORS, yardSlots } from '@/sim/maritime';
-import { CONTAINER, LAND_Y, YARD } from '@/data/layout';
+import type { PortSite } from '@/data/layout';
+import { CONTAINER, LAND_Y, PORTS, portYard } from '@/data/layout';
 import { useWorld } from '@/store/world';
 import { boxGeo, mat, UNIT_BOX } from '../materials';
 import { useSim } from './SimContext';
@@ -13,9 +14,19 @@ const _m = new THREE.Matrix4();
 const _c = new THREE.Color();
 const HIDDEN = new THREE.Matrix4().makeScale(0, 0, 0);
 
-export function ContainerYard() {
+export function ContainerYards() {
+  return (
+    <>
+      {PORTS.map((p) => (
+        <ContainerYard key={p.id} port={p} />
+      ))}
+    </>
+  );
+}
+
+function ContainerYard({ port }: { port: PortSite }) {
   const sim = useSim();
-  const slots = useMemo(() => yardSlots(), []);
+  const slots = useMemo(() => yardSlots(port), [port]);
   const ref = useRef<THREE.InstancedMesh>(null);
   const shown = useRef(-1);
 
@@ -28,10 +39,11 @@ export function ContainerYard() {
 
   useFrame(() => {
     const inst = ref.current;
-    if (!inst || shown.current === sim.yard.count) return;
-    shown.current = sim.yard.count;
+    const yard = sim.yards[port.id];
+    if (!inst || !yard || shown.current === yard.count) return;
+    shown.current = yard.count;
     slots.forEach((s, i) => {
-      if (i < sim.yard.count) inst.setMatrixAt(i, _m.makeTranslation(s.x, LAND_Y + CONTAINER.height / 2 + s.tier * CONTAINER.height, s.z));
+      if (i < yard.count) inst.setMatrixAt(i, _m.makeTranslation(s.x, LAND_Y + CONTAINER.height / 2 + s.tier * CONTAINER.height, s.z));
       else inst.setMatrixAt(i, HIDDEN);
     });
     inst.instanceMatrix.needsUpdate = true;
@@ -42,19 +54,20 @@ export function ContainerYard() {
       <instancedMesh ref={ref} args={[boxGeo(CONTAINER.length - 0.2, CONTAINER.height - 0.08, CONTAINER.width), undefined, slots.length]} castShadow receiveShadow>
         <meshStandardMaterial roughness={0.65} metalness={0.1} />
       </instancedMesh>
-      {[0, 1, 2].map((i) => (
-        <YardGantry key={i} index={i} />
+      {[0, 1].map((i) => (
+        <YardGantry key={i} index={i} port={port} />
       ))}
     </group>
   );
 }
 
-function YardGantry({ index }: { index: number }) {
+function YardGantry({ index, port }: { index: number; port: PortSite }) {
+  const YARD = portYard(port);
   const g = useRef<THREE.Group>(null);
   const hoist = useRef<THREE.Group>(null);
   const t = useRef(index * 40);
   const span = YARD.maxZ - YARD.minZ + 4;
-  const blockW = (YARD.maxX - YARD.minX) / 3;
+  const blockW = (YARD.maxX - YARD.minX) / 2;
   const x0 = YARD.minX + blockW * index + 6;
   useFrame((_, dt) => {
     const { speed, showAmbient } = useWorld.getState();

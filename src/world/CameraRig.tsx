@@ -11,8 +11,9 @@ import { useWorldLayout } from './useWorldLayout';
 import { useSim } from './maritime/SimContext';
 
 export const HOME = {
-  position: new THREE.Vector3(-55, isMobileDevice ? 240 : 160, isMobileDevice ? 280 : 190),
-  target: new THREE.Vector3(18, 0, -52),
+  // Framed slightly right of centre so the island clears the schedule panel on the right.
+  position: new THREE.Vector3(isMobileDevice ? 0 : 95, isMobileDevice ? 760 : 600, isMobileDevice ? 900 : 720),
+  target: new THREE.Vector3(isMobileDevice ? 0 : 95, 0, -5),
 };
 
 interface Goal {
@@ -45,6 +46,11 @@ export function CameraRig() {
         const t = new THREE.Vector3(p.x, LAND_Y + 4, p.z);
         goal.current = { target: t, position: t.clone().add(new THREE.Vector3(26, 34, 48)) };
       }
+    } else if (kind === 'place' && id) {
+      // Places (ports, airport) are addressed as "x,z".
+      const [x, z] = id.split(',').map(Number);
+      const t = new THREE.Vector3(x, LAND_Y, z);
+      goal.current = { target: t, position: t.clone().add(new THREE.Vector3(60, 95, 120)) };
     } else if (kind === 'ship' && id) {
       goal.current = { target: new THREE.Vector3(), position: new THREE.Vector3(), followShip: id };
     }
@@ -66,7 +72,7 @@ export function CameraRig() {
       const ship = sim.ships.find((s) => s.cfg.id === g.followShip);
       if (!ship) return void (goal.current = null);
       g.target.set(ship.x, 4, ship.z);
-      g.position.set(ship.x + 55, 48, ship.z + 70);
+      g.position.set(ship.x + 60, 55, ship.z + 85);
     }
     const k = 1 - Math.exp(-dt * 2.4);
     camera.position.lerp(g.position, k);

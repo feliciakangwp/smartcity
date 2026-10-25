@@ -84,6 +84,9 @@ export function DashboardContent({ onHighlight, onFocusSystem }: { onHighlight?:
           <Card title="Systems by criticality">
             <HBar data={s.byCriticality} color={(d) => CRIT[d.name]} label="Systems" />
           </Card>
+          <Card title="Systems by age">
+            <HBar data={s.byAge} color={(d) => d.color ?? BLUE} label="Systems" />
+          </Card>
         </div>
       </Section>
 

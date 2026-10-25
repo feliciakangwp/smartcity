@@ -1,34 +1,23 @@
-// Brings saved or imported landscapes up to the current data model without
-// losing anything the user changed. Safe to run more than once.
+// Normalises imported landscapes to the current data model (zone kinds,
+// ownership/usage, modules, port assignments). Safe to run more than once.
 import type { LandscapeData, System, Zone } from '@/types/domain';
-import { SHARED_DEMO_SYSTEM_ID, SHARED_HUB_PLOT_ID, sharedDemoSystem, sharedHubZone } from './seed';
+import { PORTS } from './layout';
 
 export function upgradeLandscape<T extends Partial<LandscapeData>>(data: T): T {
   const zones: Zone[] = (data.zones ?? []).map((z) => ({ ...z, kind: z.kind ?? (z.theme === 'shared' ? 'shared' : 'division') }));
   const isDivision = (id: string | null | undefined) => !!id && zones.some((z) => z.id === id && z.kind === 'division');
 
-  // v1 had one zone per system: it becomes the display zone, and the owner and
+  // Older records had one zone per system: it becomes the display zone, and the owner and
   // first user when that zone is a division. Existing ownership is never overwritten.
   const systems: System[] = (data.systems ?? []).map((s) => {
     const owningZoneId = s.owningZoneId !== undefined ? s.owningZoneId : isDivision(s.zoneId) ? s.zoneId : null;
     const usingZoneIds = Array.isArray(s.usingZoneIds) ? [...new Set(s.usingZoneIds)] : owningZoneId ? [owningZoneId] : [];
-    return { ...s, owningZoneId, usingZoneIds };
+    return { ...s, owningZoneId, usingZoneIds, modules: Array.isArray(s.modules) ? s.modules : undefined };
   });
 
-  // Open the central plot and add the Shared Services Hub if there is no shared zone yet.
-  const plots = (data.plots ?? []).map((p) => (p.id === SHARED_HUB_PLOT_ID ? { ...p, ring: 0 } : p));
-  const hasShared = zones.some((z) => z.kind === 'shared' && !z.archived);
-  const plotFree = !zones.some((z) => z.plotId === SHARED_HUB_PLOT_ID && !z.archived);
-  if (!hasShared && plotFree && plots.some((p) => p.id === SHARED_HUB_PLOT_ID)) {
-    const hub = sharedHubZone();
-    if (!zones.some((z) => z.id === hub.id)) {
-      zones.push({ ...hub, sortOrder: Math.max(0, ...zones.map((z) => z.sortOrder)) + 1 });
-      // The illustrative shared system comes with the hub, but only if its divisions still exist.
-      const demo = sharedDemoSystem();
-      const usersExist = demo.usingZoneIds.every((id) => zones.some((z) => z.id === id));
-      if (usersExist && !systems.some((s) => s.id === SHARED_DEMO_SYSTEM_ID || s.acronym === demo.acronym)) systems.push(demo);
-    }
-  }
+  const portIds = new Set(PORTS.map((p) => p.id));
+  const berths = (data.berths ?? []).map((b, i) => (portIds.has(b.portId) ? b : { ...b, portId: PORTS[i % PORTS.length].id }));
+  const ships = (data.ships ?? []).map((s, i) => (portIds.has(s.portId) ? s : { ...s, portId: PORTS[i % PORTS.length].id }));
 
-  return { ...data, zones, systems, plots };
+  return { ...data, zones, systems, berths, ships };
 }

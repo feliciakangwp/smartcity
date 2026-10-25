@@ -25,6 +25,8 @@ export interface MatOpts {
   opacity?: number;
   map?: THREE.Texture;
   side?: THREE.Side;
+  /** World height above which the mesh is cut away (buildings under construction). */
+  clipY?: number;
 }
 export function mat(color: string, o: MatOpts = {}) {
   const k = `${color}|${JSON.stringify({ ...o, map: o.map?.uuid })}`;
@@ -39,8 +41,10 @@ export function mat(color: string, o: MatOpts = {}) {
       transparent: o.opacity !== undefined && o.opacity < 1,
       opacity: o.opacity ?? 1,
       map: o.map ?? null,
-      side: o.side ?? THREE.FrontSide,
+      side: o.clipY !== undefined ? THREE.DoubleSide : (o.side ?? THREE.FrontSide),
       depthWrite: o.opacity === undefined || o.opacity >= 1,
+      clippingPlanes: o.clipY !== undefined ? [new THREE.Plane(new THREE.Vector3(0, -1, 0), o.clipY)] : undefined,
+      clipShadows: o.clipY !== undefined,
     });
     matCache.set(k, m);
   }
@@ -95,21 +99,28 @@ export function windowTexture(cols: number, rows: number, style: 'grid' | 'band'
 }
 
 export type Tone = 'normal' | 'hover' | 'highlight' | 'dim';
+/** Standard, legacy (older than five years) or modern (new and vibrant). */
+export type Look = 'standard' | 'legacy' | 'modern';
 
-/** Material set for a building in a given interaction tone. */
-export function buildingMats(accent: string, tone: Tone) {
+/** Material set for a building in a given interaction tone, age look and build cut-off. */
+export function buildingMats(accent: string, tone: Tone, look: Look = 'standard', clipY?: number) {
   const dim = tone === 'dim' ? 0.32 : undefined;
   const glow = tone === 'hover' ? 0.22 : tone === 'highlight' ? 0.42 : 0;
-  const em = glow ? { emissive: accent, emissiveIntensity: glow } : {};
+  const legacy = look === 'legacy';
+  const modern = look === 'modern';
+  const acc = legacy ? tint(accent, '#7d7468', 0.55) : accent;
+  const em = glow ? { emissive: accent, emissiveIntensity: glow } : modern ? { emissive: accent, emissiveIntensity: 0.12 } : {};
+  const c = clipY !== undefined ? { clipY } : {};
   return {
-    wall: (map?: THREE.Texture) => mat(C.white, { map, opacity: dim, roughness: 0.65, ...em }),
-    accent: mat(accent, { opacity: dim, roughness: 0.5, ...em }),
-    glass: mat(C.glass, { opacity: dim ?? 0.95, roughness: 0.12, metalness: 0.35, ...em }),
-    roof: mat(C.roof, { opacity: dim, roughness: 0.8 }),
-    dark: mat(C.dark, { opacity: dim, roughness: 0.6 }),
-    steel: mat(C.steel, { opacity: dim, roughness: 0.45, metalness: 0.4 }),
-    screen: mat('#5ad6f0', { emissive: '#22c3e6', emissiveIntensity: 0.9, opacity: dim }),
+    wall: (map?: THREE.Texture) => mat(legacy ? '#d3c7b2' : modern ? '#f7fafc' : C.white, { map, opacity: dim, roughness: legacy ? 0.95 : 0.6, ...em, ...c }),
+    accent: mat(acc, { opacity: dim, roughness: legacy ? 0.9 : modern ? 0.35 : 0.5, metalness: modern ? 0.2 : 0.05, ...em, ...c }),
+    glass: mat(legacy ? '#7d8f9b' : modern ? '#7cc6f2' : C.glass, { opacity: dim ?? 0.95, roughness: legacy ? 0.55 : modern ? 0.05 : 0.12, metalness: modern ? 0.5 : 0.35, ...em, ...c }),
+    roof: mat(legacy ? '#7a6455' : C.roof, { opacity: dim, roughness: 0.85, ...c }),
+    dark: mat(legacy ? '#4a4038' : C.dark, { opacity: dim, roughness: 0.6, ...c }),
+    steel: mat(legacy ? '#6d6a66' : C.steel, { opacity: dim, roughness: legacy ? 0.85 : 0.45, metalness: legacy ? 0.1 : 0.4, ...c }),
+    screen: mat(legacy ? '#9fb3bd' : '#5ad6f0', { emissive: legacy ? '#000000' : '#22c3e6', emissiveIntensity: legacy ? 0 : modern ? 1.2 : 0.9, opacity: dim, ...c }),
     tone,
+    look,
   };
 }
 export type BuildingMats = ReturnType<typeof buildingMats>;

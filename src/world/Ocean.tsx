@@ -43,7 +43,7 @@ void main() {
   if (n.y < 0.0) n = -n;
   vec3 view = normalize(cameraPosition - vWorld);
   float fres = pow(1.0 - max(dot(n, view), 0.0), 3.0);
-  float shore = smoothstep(70.0, 4.0, vWorld.z);
+  float shore = 0.0;
   vec3 col = mix(uDeep, uShallow, clamp(0.25 + vH * 0.45 + shore * 0.45, 0.0, 1.0));
   col = mix(col, uHorizon, fres * 0.55);
   float diff = max(dot(n, normalize(uSun)), 0.0);
@@ -53,14 +53,14 @@ void main() {
   float foam = smoothstep(0.52, 0.68, vH) * 0.18 + shore * smoothstep(0.2, 0.5, vH) * 0.22;
   col = mix(col, vec3(0.93, 0.97, 1.0), foam);
   float dist = length(cameraPosition.xz - vWorld.xz);
-  col = mix(col, uHorizon, smoothstep(500.0, 1500.0, dist));
+  col = mix(col, uHorizon, smoothstep(1100.0, 2600.0, dist));
   gl_FragColor = vec4(col, 1.0);
   #include <colorspace_fragment>
 }`;
 
 export function Ocean() {
   const quality = useWorld((s) => s.quality);
-  const segments = quality === 'high' ? 280 : quality === 'medium' ? 180 : 90;
+  const segments = quality === 'high' ? 360 : quality === 'medium' ? 220 : 110;
   const ref = useRef<THREE.ShaderMaterial>(null);
   const uniforms = useMemo(
     () => ({
@@ -76,8 +76,8 @@ export function Ocean() {
     if (ref.current) ref.current.uniforms.uTime.value += dt;
   });
   return (
-    <mesh rotation-x={-Math.PI / 2} position={[0, 0, 500]} frustumCulled={false}>
-      <planeGeometry args={[3200, 2000, segments, segments]} />
+    <mesh rotation-x={-Math.PI / 2} position={[0, 0, 300]} frustumCulled={false}>
+      <planeGeometry args={[4400, 3400, segments, segments]} />
       <shaderMaterial ref={ref} vertexShader={vertex} fragmentShader={fragment} uniforms={uniforms} />
     </mesh>
   );

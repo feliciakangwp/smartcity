@@ -19,8 +19,8 @@ export function QuayCrane({ berth }: { berth: BerthSim }) {
 
   useFrame(() => {
     const c = berth.crane;
-    gantry.current?.position.set(c.x, LAND_Y, 0);
-    trolley.current?.position.set(0, BOOM_Y - LAND_Y - 0.9, c.trolleyZ);
+    gantry.current?.position.set(c.x, LAND_Y, berth.port.quayZ);
+    trolley.current?.position.set(0, BOOM_Y - LAND_Y - 0.9, c.trolleyZ - berth.port.quayZ);
     const drop = BOOM_Y - 1.4 - c.hoistY;
     if (cables.current) {
       cables.current.scale.set(1, Math.max(0.1, drop - 0.1), 1);

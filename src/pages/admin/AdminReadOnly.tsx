@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useLandscape } from '@/store/landscape';
 import { DATA_TYPE_COLORS } from '@/types/domain';
 import { shipBeam, shipLength } from '@/sim/maritime';
+import { portById } from '@/data/layout';
 import { Chip, ZoneSwatch } from '@/components/ui';
 import { PageHead, PhaseNote } from './AdminLayout';
 
@@ -109,6 +110,7 @@ export function AdminMaritime() {
             <thead className="table-head">
               <tr>
                 <th className="px-4 py-2">Vessel</th>
+                <th className="px-4 py-2">Port</th>
                 <th className="px-4 py-2 text-right">Length</th>
                 <th className="px-4 py-2 text-right">Bays × rows × tiers</th>
                 <th className="px-4 py-2 text-right">Unload / load</th>
@@ -119,6 +121,7 @@ export function AdminMaritime() {
               {ships.map((s) => (
                 <tr key={s.id} className="border-t border-ink-100">
                   <td className="px-4 py-2"><span className="flex items-center gap-2"><ZoneSwatch color={s.hullColor} /> <b>{s.name}</b></span></td>
+                  <td className="px-4 py-2 text-ink-700">{portById(s.portId).name}</td>
                   <td className="num px-4 py-2 text-right">{Math.round(shipLength(s))} × {shipBeam(s).toFixed(1)}</td>
                   <td className="num px-4 py-2 text-right">{s.bays} × {s.rows} × {s.tiers}</td>
                   <td className="num px-4 py-2 text-right">{s.unloadCount} / {s.loadCount}</td>
@@ -135,7 +138,7 @@ export function AdminMaritime() {
               <li key={b.id} className="flex justify-between rounded-md bg-harbor-50 px-3 py-1.5"><span>{b.name}</span><span className="text-ink-500">One quay crane</span></li>
             ))}
           </ul>
-          <p className="mt-3 text-xs text-ink-500">Ships reserve a free berth before berthing, so two vessels never share one.</p>
+          <p className="mt-3 text-xs text-ink-500">Each port has two berths and three vessels, so at busy times one waits at anchorage. Ships reserve a free berth before berthing, so two vessels never share one.</p>
         </div>
       </div>
     </>

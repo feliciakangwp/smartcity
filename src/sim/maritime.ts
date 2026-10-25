@@ -2,15 +2,15 @@
 // 3D components read from them. Independent of ICT data-flow animation.
 import type { Berth, ShipConfig } from '@/types/domain';
 import {
-  ANCHORAGES,
   CONTAINER,
   CRANE,
-  ENTRY_LANE,
-  EXIT_LANE,
   LAND_Y,
-  TERMINAL_ROAD_Z,
-  YARD,
+  PORTS,
+  TERMINAL_ROAD_DZ,
   dockZ,
+  portById,
+  portYard,
+  type PortSite,
   type V2,
 } from '@/data/layout';
 
@@ -34,6 +34,9 @@ export interface Slot {
 export interface ShipSim {
   cfg: ShipConfig;
   index: number;
+  port: PortSite;
+  /** Which of the port's anchorages this ship waits at. */
+  anchor: V2;
   state: ShipState;
   stateTime: number;
   x: number;
@@ -89,6 +92,7 @@ export interface CraneSim {
 
 export interface BerthSim {
   cfg: Berth;
+  port: PortSite;
   ship: ShipSim | null;
   crane: CraneSim;
   buffer: BufferSlot[];
@@ -120,7 +124,9 @@ export interface MaritimeSim {
   ships: ShipSim[];
   berths: BerthSim[];
   trucks: TruckSim[];
-  yard: YardSim;
+  ports: PortSite[];
+  /** Container yard per port id. */
+  yards: Record<string, YardSim>;
   time: number;
   step: (dt: number) => void;
 }
@@ -177,14 +183,17 @@ const angleLerp = (a: number, b: number, t: number) => {
 
 // ---------- factory ----------
 export function createMaritimeSim(shipCfgs: ShipConfig[], berthCfgs: Berth[]): MaritimeSim {
-  const berths: BerthSim[] = berthCfgs.map((b) => ({
+  const berths: BerthSim[] = berthCfgs.map((b) => {
+    const port = portById(b.portId);
+    return {
     cfg: b,
+    port,
     ship: null,
-    buffer: CRANE.bufferOffsets.map((o) => ({ x: b.x + o, z: CRANE.bufferZ, color: null, tag: null, reserved: false })),
+    buffer: CRANE.bufferOffsets.map((o) => ({ x: b.x + o, z: port.quayZ + CRANE.bufferZ, color: null, tag: null, reserved: false })),
     crane: {
       x: b.x,
       homeX: b.x,
-      trolleyZ: CRANE.bufferZ,
+      trolleyZ: port.quayZ + CRANE.bufferZ,
       hoistY: HOIST_TOP,
       carrying: null,
       phase: 'idle',
@@ -194,19 +203,29 @@ export function createMaritimeSim(shipCfgs: ShipConfig[], berthCfgs: Berth[]): M
       pick: null,
       drop: null,
     },
-  }));
+    };
+  });
 
-  const yardCapacity = yardSlotCount();
-  const yard: YardSim = { capacity: yardCapacity, count: Math.round(yardCapacity * 0.55), version: 0 };
+  const yards: Record<string, YardSim> = {};
+  for (const p of PORTS) {
+    const capacity = yardSlots(p).length;
+    yards[p.id] = { capacity, count: Math.round(capacity * 0.55), version: 0 };
+  }
 
+  const perPort = new Map<string, number>();
   const ships: ShipSim[] = shipCfgs.map((cfg, index) => {
+    const port = portById(cfg.portId);
+    const k = perPort.get(port.id) ?? 0;
+    perPort.set(port.id, k + 1);
     const s: ShipSim = {
       cfg,
       index,
+      port,
+      anchor: port.anchorages[k % port.anchorages.length],
       state: 'AT_SEA',
       stateTime: 0,
-      x: ENTRY_LANE[0][0],
-      z: ENTRY_LANE[0][1],
+      x: port.entry[0][0],
+      z: port.entry[0][1],
       heading: 0,
       speed: 0,
       path: [],
@@ -224,26 +243,41 @@ export function createMaritimeSim(shipCfgs: ShipConfig[], berthCfgs: Berth[]): M
     return s;
   });
 
-  // Stagger the opening scene: one ship already at a berth unloading, one inbound.
-  if (ships[0] && berths[0]) {
-    const s = ships[0];
-    const b = berths[0];
-    b.ship = s;
-    s.berth = b;
-    s.x = b.cfg.x;
-    s.z = dockZ(s.beam);
-    s.heading = 0;
-    setState(s, 'UNLOADING');
-    startCraneTask(b, 'unload', s.toUnload);
-  }
-  if (ships[1]) {
-    const s = ships[1];
-    s.x = ENTRY_LANE[1][0];
-    s.z = ENTRY_LANE[1][1];
-    s.path = [...ENTRY_LANE.slice(2), ANCHORAGES[s.index % ANCHORAGES.length]];
-    s.heading = Math.atan2(-(s.path[0][1] - s.z), s.path[0][0] - s.x);
-    s.speed = 12;
-    setState(s, 'APPROACHING');
+  // Opening schedule per port: one ship unloading, one loading, one waiting at
+  // anchorage for a free berth; the next port has one inbound and one at sea.
+  for (const port of PORTS) {
+    const mine = ships.filter((s) => s.port.id === port.id);
+    const docks = berths.filter((b) => b.port.id === port.id);
+    const busy = port.id === PORTS[0].id;
+    mine.forEach((s, k) => {
+      if (k < docks.length && (busy || k === 0)) {
+        const b = docks[k];
+        b.ship = s;
+        s.berth = b;
+        s.x = b.cfg.x;
+        s.z = dockZ(s.beam, port.quayZ);
+        s.heading = 0;
+        if (k === 0) {
+          setState(s, 'UNLOADING');
+          startCraneTask(b, 'unload', s.toUnload);
+        } else {
+          s.toUnload = 0;
+          setState(s, 'LOADING');
+          startCraneTask(b, 'load', s.toLoad);
+        }
+      } else if (busy) {
+        s.x = s.anchor[0];
+        s.z = s.anchor[1];
+        setState(s, 'WAITING');
+      } else if (k === 1) {
+        s.x = port.entry[1][0];
+        s.z = port.entry[1][1];
+        s.path = [s.anchor];
+        s.heading = Math.atan2(-(s.anchor[1] - s.z), s.anchor[0] - s.x);
+        s.speed = 12;
+        setState(s, 'APPROACHING');
+      }
+    });
   }
 
   const trucks: TruckSim[] = [];
@@ -256,7 +290,7 @@ export function createMaritimeSim(shipCfgs: ShipConfig[], berthCfgs: Berth[]): M
         state: 'idle',
         job: null,
         x: yardX,
-        z: YARD.maxZ + 2.5,
+        z: portYard(b.port).maxZ + 2.5,
         heading: Math.PI / 2,
         path: [],
         pathIndex: 0,
@@ -272,7 +306,8 @@ export function createMaritimeSim(shipCfgs: ShipConfig[], berthCfgs: Berth[]): M
     ships,
     berths,
     trucks,
-    yard,
+    ports: PORTS,
+    yards,
     time: 0,
     step(dt) {
       if (dt <= 0) return;
@@ -285,17 +320,14 @@ export function createMaritimeSim(shipCfgs: ShipConfig[], berthCfgs: Berth[]): M
   return sim;
 }
 
-export function yardSlotCount() {
-  return yardSlots().length;
-}
-
-/** Container stack positions in the yard (x, z, tier), in fill order. */
-export function yardSlots() {
+/** Container stack positions in a port's yard (x, z, tier), in fill order. */
+export function yardSlots(port: PortSite) {
+  const yard = portYard(port);
   const out: { x: number; z: number; tier: number }[] = [];
   const blocks: number[] = [];
-  for (let x = YARD.minX + 4; x < YARD.maxX - 4; x += 30) blocks.push(x);
+  for (let x = yard.minX + 2; x + 4 * (CONTAINER.length + 0.5) < yard.maxX; x += 30) blocks.push(x);
   const rowsZ: number[] = [];
-  for (let z = YARD.minZ + 2; z < YARD.maxZ - 2; z += CONTAINER.width + 0.4) rowsZ.push(z);
+  for (let z = yard.minZ + 2; z < yard.maxZ - 2; z += CONTAINER.width + 0.4) rowsZ.push(z);
   for (let tier = 0; tier < 4; tier++)
     for (const bx of blocks)
       for (let i = 0; i < 4; i++)
@@ -344,8 +376,8 @@ function followPath(s: ShipSim, dt: number, vMax: number, vMin: number, sim: Mar
   return false;
 }
 
-function freeBerth(sim: MaritimeSim) {
-  return sim.berths.find((b) => !b.ship);
+function freeBerth(sim: MaritimeSim, port: PortSite) {
+  return sim.berths.find((b) => b.port === port && !b.ship);
 }
 
 function stepShip(s: ShipSim, dt: number, sim: MaritimeSim) {
@@ -355,9 +387,9 @@ function stepShip(s: ShipSim, dt: number, sim: MaritimeSim) {
       s.seaTimer -= dt;
       if (s.seaTimer <= 0) {
         fillCargo(s);
-        s.x = ENTRY_LANE[0][0];
-        s.z = ENTRY_LANE[0][1];
-        s.path = [...ENTRY_LANE.slice(1), ANCHORAGES[s.index % ANCHORAGES.length]];
+        s.x = s.port.entry[0][0];
+        s.z = s.port.entry[0][1];
+        s.path = [...s.port.entry.slice(1), s.anchor];
         s.pathIndex = 0;
         s.heading = Math.atan2(-(s.path[0][1] - s.z), s.path[0][0] - s.x);
         s.speed = 14;
@@ -375,11 +407,11 @@ function stepShip(s: ShipSim, dt: number, sim: MaritimeSim) {
     }
     case 'WAITING': {
       s.speed *= 1 - Math.min(1, dt);
-      const b = freeBerth(sim);
+      const b = freeBerth(sim, s.port);
       if (b && s.stateTime > 2) {
         b.ship = s;
         s.berth = b;
-        const dz = dockZ(s.beam);
+        const dz = dockZ(s.beam, s.port.quayZ);
         s.path = [
           [b.cfg.x - 60, dz + 26],
           [b.cfg.x - 14, dz + 3],
@@ -420,7 +452,7 @@ function stepShip(s: ShipSim, dt: number, sim: MaritimeSim) {
         s.path = [
           [s.x + 30, s.z + 14],
           [s.x + 80, s.z + 46],
-          ...EXIT_LANE,
+          ...s.port.exit,
         ];
         s.pathIndex = 0;
         setState(s, 'DEPARTING');
@@ -503,7 +535,7 @@ function stepCrane(b: BerthSim, dt: number, sim: MaritimeSim) {
   switch (c.phase) {
     case 'idle': {
       c.x = approach(c.x, c.homeX, gantry * 0.5);
-      c.trolleyZ = approach(c.trolleyZ, CRANE.bufferZ, trolley * 0.5);
+      c.trolleyZ = approach(c.trolleyZ, b.port.quayZ + CRANE.bufferZ, trolley * 0.5);
       c.hoistY = approach(c.hoistY, HOIST_TOP, hoist);
       break;
     }
@@ -621,9 +653,10 @@ function stepCrane(b: BerthSim, dt: number, sim: MaritimeSim) {
 
 // ---------- terminal trucks ----------
 function routeTo(t: TruckSim, dest: V2) {
+  const road = t.berth.port.quayZ + TERMINAL_ROAD_DZ + (t.id % 2 ? 1.6 : -1.6);
   t.path = [
-    [t.x, TERMINAL_ROAD_Z + (t.id % 2 ? 1.6 : -1.6)],
-    [dest[0], TERMINAL_ROAD_Z + (t.id % 2 ? 1.6 : -1.6)],
+    [t.x, road],
+    [dest[0], road],
     dest,
   ];
   t.pathIndex = 0;
@@ -672,13 +705,14 @@ function stepTruck(t: TruckSim, dt: number, sim: MaritimeSim) {
           sim.trucks.filter((o) => o.berth === b && o.job === 'export').length +
           (c.carrying !== null ? 1 : 0);
         const free = b.buffer.find((s) => s.color === null && !s.reserved);
-        if (inFlight < c.remaining && free && sim.yard.count > 0) {
+        const yard = sim.yards[b.port.id];
+        if (inFlight < c.remaining && free && yard.count > 0) {
           free.reserved = true;
           t.target = free;
           t.job = 'export';
           t.carrying = pickColor();
-          sim.yard.count--;
-          sim.yard.version++;
+          yard.count--;
+          yard.version++;
           routeTo(t, [free.x, free.z]);
           t.state = 'toBuffer';
         }
@@ -707,7 +741,7 @@ function stepTruck(t: TruckSim, dt: number, sim: MaritimeSim) {
       }
       t.target.reserved = false;
       t.target = null;
-      routeTo(t, [t.yardX, YARD.maxZ + 2.5]);
+      routeTo(t, [t.yardX, portYard(b.port).maxZ + 2.5]);
       t.state = 'toYard';
       break;
     }
@@ -722,8 +756,9 @@ function stepTruck(t: TruckSim, dt: number, sim: MaritimeSim) {
       t.timer -= dt;
       if (t.timer > 0) break;
       if (t.carrying !== null) {
-        sim.yard.count = Math.min(sim.yard.capacity, sim.yard.count + 1);
-        sim.yard.version++;
+        const yard = sim.yards[b.port.id];
+        yard.count = Math.min(yard.capacity, yard.count + 1);
+        yard.version++;
         t.carrying = null;
       }
       t.job = null;

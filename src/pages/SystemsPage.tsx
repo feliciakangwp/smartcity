@@ -99,7 +99,7 @@ export default function SystemsPage() {
                     <tr key={s.id} className="border-t border-ink-100 hover:bg-harbor-50/60">
                       <td className="px-4 py-2.5">
                         <div className="flex items-baseline gap-2">
-                          <span className="w-12 shrink-0 font-mono text-xs font-semibold text-navy-700">{s.acronym}</span>
+                          <span className="min-w-[3rem] shrink-0 font-mono text-xs font-semibold text-navy-700">{s.acronym}</span>
                           <span>
                             <span className="font-semibold">{s.name}</span>
                             <span className="block max-w-[340px] truncate text-xs text-ink-500">{s.businessPurpose}</span>

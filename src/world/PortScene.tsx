@@ -15,11 +15,12 @@ import { UsageLines } from './UsageLines';
 import { MaritimeSimProvider, useSim } from './maritime/SimContext';
 import { Ship } from './maritime/Ship';
 import { ApronBuffer, QuayCrane } from './maritime/QuayCrane';
-import { ContainerYard } from './maritime/Yard';
-import { RoadTraffic, TerminalTrucks } from './maritime/Trucks';
+import { ContainerYards } from './maritime/Yard';
+import { RoadTrucks, TerminalTrucks } from './maritime/Trucks';
+import { Airport } from './airport/Airport';
 import type { Tone } from './materials';
 
-const SUN: [number, number, number] = [160, 260, 110];
+const SUN: [number, number, number] = [260, 420, 200];
 
 export function PortScene() {
   const quality = useWorld((s) => s.quality);
@@ -33,7 +34,11 @@ export function PortScene() {
     <Canvas
       shadows={effective !== 'low'}
       dpr={dpr}
-      camera={{ position: HOME.position.toArray(), fov: 42, near: 1, far: 4000 }}
+      camera={{ position: HOME.position.toArray(), fov: 42, near: 1, far: 6000 }}
+      onCreated={({ gl }) => {
+        // Lets buildings under construction be cut off at their build height.
+        gl.localClippingEnabled = true;
+      }}
       gl={{ antialias: effective !== 'low', powerPreference: 'high-performance' }}
       onPointerMissed={() => select(null)}
     >
@@ -43,8 +48,8 @@ export function PortScene() {
       />
       <AdaptiveDpr pixelated={false} />
       <color attach="background" args={['#cfe6f6']} />
-      <fog attach="fog" args={['#d4e8f5', 520, 1500]} />
-      <Sky sunPosition={SUN} turbidity={3.5} rayleigh={0.9} mieCoefficient={0.004} mieDirectionalG={0.8} distance={3500} />
+      <fog attach="fog" args={['#d4e8f5', 1100, 2800]} />
+      <Sky sunPosition={SUN} turbidity={3.5} rayleigh={0.9} mieCoefficient={0.004} mieDirectionalG={0.8} distance={5000} />
       <hemisphereLight args={['#eaf4ff', '#8fa88a', 0.85]} />
       <ambientLight intensity={0.25} />
       <directionalLight
@@ -53,12 +58,12 @@ export function PortScene() {
         color="#fff4e2"
         castShadow={effective !== 'low'}
         shadow-mapSize={effective === 'high' ? [4096, 4096] : [2048, 2048]}
-        shadow-camera-left={-260}
-        shadow-camera-right={260}
-        shadow-camera-top={200}
-        shadow-camera-bottom={-200}
+        shadow-camera-left={-520}
+        shadow-camera-right={520}
+        shadow-camera-top={340}
+        shadow-camera-bottom={-340}
         shadow-camera-near={10}
-        shadow-camera-far={900}
+        shadow-camera-far={1600}
         shadow-bias={-0.0004}
         shadow-normalBias={0.6}
       />
@@ -68,7 +73,8 @@ export function PortScene() {
           <Terrain />
           <Districts />
           <Maritime />
-          <RoadTraffic />
+          <RoadTrucks />
+          <Airport />
           <IntegrationLines />
           <UsageLines />
           <CameraRig />
@@ -81,7 +87,7 @@ export function PortScene() {
         dampingFactor={0.08}
         maxPolarAngle={Math.PI / 2.25}
         minDistance={18}
-        maxDistance={900}
+        maxDistance={1800}
         screenSpacePanning={false}
       />
     </Canvas>
@@ -137,7 +143,7 @@ function Maritime() {
           <ApronBuffer berth={b} />
         </group>
       ))}
-      <ContainerYard />
+      <ContainerYards />
       <TerminalTrucks />
     </>
   );

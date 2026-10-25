@@ -1,6 +1,7 @@
 // Dashboard figures, all derived from stored records. Nothing here is operational telemetry.
 import type { Integration, Journey, System, Zone } from '@/types/domain';
 import { CRITICALITIES, MECHANISMS, SYSTEM_CATEGORIES, SYSTEM_STATUSES } from '@/types/domain';
+import { buildState } from './systemAge';
 
 export interface Landscape {
   zones: Zone[];
@@ -23,9 +24,12 @@ export const activeIntegrations = (ints: Integration[], systems: System[]) => {
 export const divisionZones = (zones: Zone[]) => activeZones(zones).filter((z) => z.kind === 'division');
 
 /** Using divisions that are still active divisions. */
-export function usingDivisions(s: System, zones: Zone[]) {
+export function usingDivisions(s: System, zones: Zone[], moduleId?: string | null) {
   const ok = new Set(divisionZones(zones).map((z) => z.id));
-  return s.usingZoneIds.filter((id) => ok.has(id));
+  const mod = moduleId ? s.modules?.find((m) => m.id === moduleId) : undefined;
+  // A system's users include everyone who uses any of its modules.
+  const ids = mod ? mod.usingZoneIds : [...new Set([...s.usingZoneIds, ...(s.modules ?? []).flatMap((m) => m.usingZoneIds)])];
+  return ids.filter((id) => ok.has(id));
 }
 /** Owning division if it is still an active division, otherwise null (unassigned). */
 export function owningDivision(s: System, zones: Zone[]) {
@@ -94,6 +98,15 @@ export function summarise(l: Landscape) {
     byCategory: countBy(systems, (s) => s.category, SYSTEM_CATEGORIES).filter((d) => d.value > 0),
     byStatus: countBy(systems, (s) => s.status, SYSTEM_STATUSES),
     byCriticality: countBy(systems, (s) => s.criticality, CRITICALITIES),
+    byAge: (() => {
+      const st = systems.map(buildState);
+      return [
+        { name: 'Legacy (over 5 years)', value: st.filter((b) => b.legacy).length, color: '#9a6b4f' },
+        { name: 'New (5 years or less)', value: st.filter((b) => !b.legacy && !b.developing && b.age !== null).length, color: '#22c3e6' },
+        { name: 'Under development', value: st.filter((b) => b.developing).length, color: '#e0a21a' },
+        { name: 'Year not recorded', value: st.filter((b) => !b.developing && b.age === null).length, color: '#94a3b8' },
+      ].filter((d) => d.value > 0);
+    })(),
     byMechanism: countBy(integrations, (i) => i.mechanism, MECHANISMS).filter((d) => d.value > 0),
     mostConnected: systems
       .map((s) => ({ system: s, ...degree.get(s.id)!, total: degree.get(s.id)!.in + degree.get(s.id)!.out }))

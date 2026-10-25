@@ -8,6 +8,7 @@ import { DashboardStrip } from '@/components/dashboard/DashboardStrip';
 import { DashboardContent } from '@/components/dashboard/DashboardContent';
 import { DataTypeLegend, SimControls, SystemsViewFilter, WorldSearch, WorldToolbar } from '@/components/world/WorldControls';
 import { InfoPanel } from '@/components/world/InfoPanel';
+import { SchedulePanel } from '@/components/world/SchedulePanel';
 import { AddSystemDialog } from '@/components/world/AddSystemDialog';
 
 class SceneBoundary extends Component<{ children: ReactNode }, { error: boolean }> {
@@ -27,6 +28,12 @@ class SceneBoundary extends Component<{ children: ReactNode }, { error: boolean 
       );
     return this.props.children;
   }
+}
+
+/** Details for a selection take the right-hand side; otherwise the operations schedule shows there. */
+function RightPanel() {
+  const selection = useWorld((s) => s.selection);
+  return selection ? <InfoPanel /> : <SchedulePanel />;
 }
 
 export default function WorldPage() {
@@ -62,7 +69,7 @@ export default function WorldPage() {
           </div>
           <div className="flex-1" />
           <div className="flex min-h-0 items-start justify-end">
-            <InfoPanel />
+            <RightPanel />
           </div>
           {expanded && (
             <div className="panel pointer-events-auto absolute inset-x-0 top-0 z-20 mx-auto max-h-full w-full max-w-6xl overflow-y-auto p-5">

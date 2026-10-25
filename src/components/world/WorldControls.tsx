@@ -1,10 +1,11 @@
 // Port World overlay controls: search, camera/visibility toolbar, simulation speed.
 import { useMemo, useRef, useState } from 'react';
-import { Eye, Home, Maximize, Minimize, Pause, RotateCcw, Search, Ship, Spline, Tags } from 'lucide-react';
+import { CalendarClock, Eye, Home, MapPin, Maximize, Minimize, Pause, RotateCcw, Search, Ship, Spline, Tags } from 'lucide-react';
 import { useLandscape } from '@/store/landscape';
 import { useWorld, type Speed } from '@/store/world';
 import { activeSystems, activeZones, matchesFilter, type SystemFilter } from '@/lib/metrics';
 import { DATA_TYPE_COLORS, DATA_TYPES } from '@/types/domain';
+import { AIRPORT, PORTS } from '@/data/layout';
 import { IconButton, ZoneSwatch, cx } from '@/components/ui';
 
 export function WorldToolbar() {
@@ -35,13 +36,19 @@ export function WorldToolbar() {
       <IconButton icon={Tags} label="Show zone and system labels" active={s.showLabels} onClick={() => s.toggle('showLabels')} />
       <IconButton icon={Spline} label="Show integration lines" active={s.showLines} onClick={() => s.toggle('showLines')} />
       <IconButton icon={Eye} label="Show ambient animations" active={s.showAmbient} onClick={() => s.toggle('showAmbient')} />
+      <IconButton icon={CalendarClock} label="Operations schedule" active={s.showSchedule} onClick={() => s.toggle('showSchedule')} />
       <div className="mx-1 my-0.5 h-px bg-ink-200" />
       <IconButton icon={full ? Minimize : Maximize} label={full ? 'Exit fullscreen' : 'Fullscreen'} onClick={toggleFull} />
     </div>
   );
 }
 
-type Result = { kind: 'zone' | 'system' | 'ship'; id: string; title: string; sub: string; color: string };
+type Result = { kind: 'zone' | 'system' | 'ship' | 'place'; id: string; title: string; sub: string; color: string };
+
+const PLACES: Result[] = [
+  ...PORTS.map((p) => ({ kind: 'place' as const, id: `${(p.minX + p.maxX) / 2},${p.quayZ - 20}`, title: p.name, sub: 'Container port', color: '#1f56a3' })),
+  { kind: 'place', id: `${AIRPORT.runways[0].x - 10},${AIRPORT.terminal.z}`, title: 'Changi Airport', sub: 'Airport', color: '#1f56a3' },
+];
 
 export function WorldSearch() {
   const zones = useLandscape((s) => s.zones);
@@ -66,14 +73,19 @@ export function WorldSearch() {
         color: zoneById.get(s.zoneId)?.color ?? '#999',
       })),
       ...ships.map((s) => ({ kind: 'ship' as const, id: s.id, title: s.name, sub: 'Vessel (simulated)', color: s.hullColor })),
+      ...PLACES,
     ];
     const term = q.trim().toLowerCase();
-    if (!term) return all.filter((r) => r.kind !== 'system');
+    if (!term) return all.filter((r) => r.kind !== 'system' && r.kind !== 'ship');
     return all.filter((r) => r.title.toLowerCase().includes(term) || r.sub.toLowerCase().includes(term)).slice(0, 12);
   }, [q, zones, systems, ships]);
 
+  const focusOn = useWorld((s) => s.focusOn);
   const choose = (r: Result) => {
-    select({ kind: r.kind, id: r.id }, true);
+    if (r.kind === 'place') {
+      select(null);
+      focusOn('place', r.id);
+    } else select({ kind: r.kind, id: r.id }, true);
     setOpen(false);
     setQ('');
     input.current?.blur();
@@ -119,7 +131,7 @@ export function WorldSearch() {
                 onClick={() => choose(r)}
                 className={cx('flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm', i === active ? 'bg-harbor-100' : 'hover:bg-harbor-50')}
               >
-                {r.kind === 'ship' ? <Ship className="h-3.5 w-3.5 text-ink-500" /> : <ZoneSwatch color={r.color} />}
+                {r.kind === 'ship' ? <Ship className="h-3.5 w-3.5 text-ink-500" /> : r.kind === 'place' ? <MapPin className="h-3.5 w-3.5 text-ink-500" /> : <ZoneSwatch color={r.color} />}
                 <span className="min-w-0 flex-1 truncate font-medium">{r.title}</span>
                 <span className="shrink-0 text-[11px] text-ink-500">{r.sub}</span>
               </button>

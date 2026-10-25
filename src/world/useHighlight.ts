@@ -11,6 +11,7 @@ export function useHighlight() {
   const hovered = useWorld((s) => s.hovered);
   const impactId = useWorld((s) => s.impactSystemId);
   const filter = useWorld((s) => s.systemFilter);
+  const moduleId = useWorld((s) => s.selectedModuleId);
   const systems = useLandscape((s) => s.systems);
   const zones = useLandscape((s) => s.zones);
   const integrations = useLandscape((s) => s.integrations);
@@ -37,7 +38,7 @@ export function useHighlight() {
         if (i.destinationId === selection.id) related.add(i.sourceId);
       }
       const sys = live.find((s) => s.id === selection.id);
-      if (sys) for (const z of usingDivisions(sys, zones)) usingZones.add(z);
+      if (sys) for (const z of usingDivisions(sys, zones, moduleId)) usingZones.add(z);
     } else if (selection?.kind === 'zone') {
       focusZone = selection.id;
       for (const s of live) if (s.zoneId === selection.id) focus.add(s.id);
@@ -61,5 +62,5 @@ export function useHighlight() {
     };
     const zoneEmphasised = (zoneId: string) => usingZones.has(zoneId) || litZones.has(zoneId);
     return { tone, zoneDimmed, zoneEmphasised, focus, related, usingZones };
-  }, [selection, hovered, impactId, filter, systems, zones, integrations]);
+  }, [selection, hovered, impactId, filter, moduleId, systems, zones, integrations]);
 }

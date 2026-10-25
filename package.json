@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "gen:seed-sql": "tsx --tsconfig tsconfig.node.json scripts/generate-seed-sql.ts",
-    "sim:check": "tsx --tsconfig tsconfig.node.json scripts/sim-check.ts 1200"
+    "sim:check": "tsx --tsconfig tsconfig.node.json scripts/sim-check.ts 1200",
+    "layout:check": "tsx --tsconfig tsconfig.node.json scripts/layout-check.ts"
   },
   "dependencies": {
     "@react-three/drei": "9.114.0",

@@ -61,6 +61,13 @@ export function placeSystems(layouts: ZoneLayout[], systems: System[]): Map<stri
   const out = new Map<string, SystemPlacement>();
   for (const l of layouts) {
     const list = systems.filter((s) => s.zoneId === l.zone.id && !s.archived);
+    // A lone system with modules gets the whole build area for its campus.
+    if (list.length === 1 && (list[0].modules?.length ?? 0) > 0) {
+      const areaW = l.width - 6;
+      const areaD = l.depth - l.frontStrip - 4;
+      out.set(list[0].id, { system: list[0], zoneId: l.zone.id, x: l.plot.x, z: l.plot.z - l.depth / 2 + 2 + areaD / 2, footprint: Math.min(areaW, areaD) * 0.92, slot: 0 });
+      continue;
+    }
     const grid = slotGrid(list.length, l);
     const taken = new Set<number>();
     // Explicit slots first, then fill the gaps in registration order.

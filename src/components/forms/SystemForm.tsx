@@ -1,7 +1,8 @@
 // Add / edit system form, shared by the Port World dialog and the Studio registry.
 import { useState, type FormEvent } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-import { CRITICALITIES, SYSTEM_CATEGORIES, SYSTEM_STATUSES, type System, type Zone } from '@/types/domain';
+import { CRITICALITIES, LEGACY_AGE_YEARS, SYSTEM_CATEGORIES, SYSTEM_STATUSES, type System, type SystemModule, type Zone } from '@/types/domain';
+import { CURRENT_YEAR } from '@/lib/systemAge';
 import type { NewSystem } from '@/store/landscape';
 import { useLandscape } from '@/store/landscape';
 import { activeZones } from '@/lib/metrics';
@@ -28,14 +29,16 @@ export function blankSystem(zoneId: string, zones: Zone[] = []): NewSystem {
   };
 }
 
-type Errors = Partial<Record<'name' | 'acronym' | 'zoneId' | 'owningZoneId' | 'usingZoneIds' | 'docs', string>>;
+type Errors = Partial<Record<'name' | 'acronym' | 'zoneId' | 'owningZoneId' | 'usingZoneIds' | 'docs' | 'yearIntroduced' | 'modules', string>>;
 
 export function validateSystem(v: NewSystem, all: System[], selfId?: string, zones: Zone[] = []): Errors {
   const e: Errors = {};
   if (!v.name.trim()) e.name = 'Enter the system name.';
-  const ac = v.acronym.trim().toUpperCase();
-  if (!/^[A-Z0-9]{2,8}$/.test(ac)) e.acronym = 'Use 2–8 letters or digits, for example TDP.';
-  else if (all.some((s) => !s.archived && s.id !== selfId && s.acronym.toUpperCase() === ac)) e.acronym = `${ac} is already used by another system.`;
+  const ac = v.acronym.trim();
+  if (!/^[A-Za-z0-9@.\-]{2,16}$/.test(ac)) e.acronym = 'Use 2–16 letters, digits, @, dot or dash, for example TradeNet5.0.';
+  else if (all.some((s) => !s.archived && s.id !== selfId && s.acronym.toUpperCase() === ac.toUpperCase())) e.acronym = `${ac} is already used by another system.`;
+  if (v.yearIntroduced !== undefined && (!Number.isInteger(v.yearIntroduced) || v.yearIntroduced < 1980 || v.yearIntroduced > 2050)) e.yearIntroduced = 'Enter a year between 1980 and 2050.';
+  if ((v.modules ?? []).some((m) => !m.name.trim())) e.modules = 'Give every module a name.';
   if (!v.zoneId) e.zoneId = 'Choose the zone where the building is displayed.';
   const division = (id: string) => zones.length === 0 || zones.some((z) => z.id === id && z.kind === 'division' && !z.archived);
   if (v.owningZoneId && !division(v.owningZoneId)) e.owningZoneId = 'The owner must be a division, not a shared zone.';
@@ -65,6 +68,15 @@ export function SystemForm({
   const [v, setV] = useState<NewSystem>(initial);
   const [errors, setErrors] = useState<Errors>({});
   const set = <K extends keyof NewSystem>(k: K, val: NewSystem[K]) => setV((x) => ({ ...x, [k]: val }));
+  const developing = v.status === 'Planned' || v.status === 'In Development';
+  const age = v.yearIntroduced ? CURRENT_YEAR - v.yearIntroduced : null;
+  const ageHint = developing
+    ? 'Shown as a new, modern building once built.'
+    : age === null
+      ? 'Systems older than 5 years look like legacy buildings.'
+      : age > LEGACY_AGE_YEARS
+        ? `${age} years old: shown as a legacy building.`
+        : `${age} year${age === 1 ? '' : 's'} old: shown as a new, modern building.`;
 
   const submit = (ev: FormEvent) => {
     ev.preventDefault();
@@ -74,8 +86,10 @@ export function SystemForm({
     onSubmit({
       ...v,
       name: v.name.trim(),
-      acronym: v.acronym.trim().toUpperCase(),
+      acronym: v.acronym.trim(),
       usingZoneIds: [...new Set(v.usingZoneIds)],
+      modules: v.modules?.length ? v.modules.map((m) => ({ ...m, name: m.name.trim(), usingZoneIds: [...new Set(m.usingZoneIds)] })) : undefined,
+      buildProgress: v.status === 'Planned' || v.status === 'In Development' ? (v.buildProgress ?? 0) : undefined,
       docs: v.docs.filter((d) => d.url.trim()).map((d) => ({ label: d.label.trim() || d.url.trim(), url: d.url.trim() })),
     });
   };
@@ -84,7 +98,7 @@ export function SystemForm({
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
-      <div className="grid gap-3 sm:grid-cols-[1fr_140px]">
+      <div className="grid gap-3 sm:grid-cols-[1fr_170px]">
         <label className="flex flex-col gap-1">
           <span className="label">System name</span>
           <input id="sys-name" className="input" value={v.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Trade Declaration Portal" />
@@ -92,7 +106,7 @@ export function SystemForm({
         </label>
         <label className="flex flex-col gap-1">
           <span className="label">Acronym</span>
-          <input id="sys-acronym" className="input font-mono uppercase" value={v.acronym} onChange={(e) => set('acronym', e.target.value)} placeholder="TDP" maxLength={8} />
+          <input id="sys-acronym" className="input font-mono" value={v.acronym} onChange={(e) => set('acronym', e.target.value)} placeholder="TradeNet5.0" maxLength={16} />
           {err('acronym')}
         </label>
       </div>
@@ -122,7 +136,29 @@ export function SystemForm({
             ))}
           </select>
         </label>
+        <label className="flex flex-col gap-1">
+          <span className="label">{developing ? 'Target go-live year' : 'Go-live year'}</span>
+          <input
+            id="sys-year"
+            type="number"
+            className="input num"
+            value={v.yearIntroduced ?? ''}
+            onChange={(e) => set('yearIntroduced', e.target.value === '' ? undefined : Number(e.target.value))}
+            placeholder="e.g. 2014"
+          />
+          <span className="text-[11px] text-ink-500">{ageHint}</span>
+          {err('yearIntroduced')}
+        </label>
       </div>
+      {developing && (
+        <label className="flex flex-col gap-1">
+          <span className="label">Development progress: {v.buildProgress ?? 0}%</span>
+          <input id="sys-progress" type="range" min={0} max={100} step={5} value={v.buildProgress ?? 0} onChange={(e) => set('buildProgress', Number(e.target.value))} className="accent-navy-800" />
+          <span className="text-[11px] text-ink-500">The building in the port is drawn this far through construction. 0% shows an empty fenced site.</span>
+        </label>
+      )}
+      <ModulesEditor v={v} setV={setV} divisions={divisions} />
+      {err('modules')}
       <label className="flex flex-col gap-1">
         <span className="label">Description</span>
         <textarea id="sys-desc" className="input min-h-[64px]" value={v.description} onChange={(e) => set('description', e.target.value)} />
@@ -274,6 +310,70 @@ function OwnershipFields({
             ? `Used by ${v.usingZoneIds.length} divisions. ${sharedZone && v.zoneId !== sharedZone.id ? `You can display it in ${sharedZone.name}; it is not moved automatically.` : ''}`
             : 'Becomes a shared system when two or more divisions use it.'}
         </span>
+      </div>
+    </fieldset>
+  );
+}
+
+const newModuleId = () =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `m-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+/** Optional modules: each has a name and its own using divisions. The system's users include all of them. */
+function ModulesEditor({ v, setV, divisions }: { v: NewSystem; setV: React.Dispatch<React.SetStateAction<NewSystem>>; divisions: Zone[] }) {
+  const modules = v.modules ?? [];
+  const [open, setOpen] = useState(modules.length > 0);
+  const update = (next: SystemModule[]) => setV((x) => ({ ...x, modules: next }));
+  if (!open)
+    return (
+      <div>
+        <Button type="button" size="sm" icon={Plus} onClick={() => setOpen(true)}>
+          Split into modules
+        </Button>
+      </div>
+    );
+  return (
+    <fieldset className="flex flex-col gap-2 rounded-md border border-ink-200 p-3">
+      <legend className="px-1 text-xs font-semibold text-ink-700">Modules ({modules.length})</legend>
+      <p className="text-xs text-ink-500">Use modules when parts of one system serve different divisions. It stays one building; each module shows as a pod.</p>
+      {modules.map((m, i) => (
+        <div key={m.id} className="flex flex-col gap-1.5 rounded-md bg-harbor-50/70 p-2">
+          <div className="flex gap-2">
+            <input
+              id={`mod-name-${i}`}
+              className="input"
+              value={m.name}
+              onChange={(e) => update(modules.map((x) => (x.id === m.id ? { ...x, name: e.target.value } : x)))}
+              aria-label={`Module ${i + 1} name`}
+            />
+            <button type="button" className="rounded-md px-2 text-ink-500 hover:bg-red-50 hover:text-red-700" aria-label={`Remove ${m.name}`} onClick={() => update(modules.filter((x) => x.id !== m.id))}>
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {divisions.map((z) => {
+              const on = m.usingZoneIds.includes(z.id);
+              return (
+                <button
+                  key={z.id}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() =>
+                    update(modules.map((x) => (x.id === m.id ? { ...x, usingZoneIds: on ? x.usingZoneIds.filter((u) => u !== z.id) : [...x.usingZoneIds, z.id] } : x)))
+                  }
+                  className={cx('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold', on ? 'border-navy-700 bg-navy-800 text-white' : 'border-ink-200 bg-white text-ink-700')}
+                >
+                  <ZoneSwatch color={z.color} className="h-2 w-2" />
+                  {z.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      <div>
+        <Button type="button" size="sm" icon={Plus} onClick={() => update([...modules, { id: newModuleId(), name: `Module ${String(modules.length + 1).padStart(2, '0')}`, usingZoneIds: [] }])}>
+          Add module
+        </Button>
       </div>
     </fieldset>
   );

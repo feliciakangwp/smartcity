@@ -1,13 +1,11 @@
 // Terminal trucks driven by the simulation, plus ambient road traffic in the districts.
-import { forwardRef, useMemo, useRef } from 'react';
+import { forwardRef, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { TruckSim } from '@/sim/maritime';
-import { CONTAINER_COLORS } from '@/sim/maritime';
-import { CONTAINER, LAND_Y, type V2 } from '@/data/layout';
-import { useWorld } from '@/store/world';
+import { CONTAINER, LAND_Y } from '@/data/layout';
 import { boxGeo, cylGeo, mat } from '../materials';
-import { useSim } from './SimContext';
+import { useLogistics, useSim } from './SimContext';
 
 interface TruckRefs {
   group: THREE.Group | null;
@@ -72,65 +70,38 @@ export function TerminalTrucks() {
   );
 }
 
-// ---------- ambient district traffic ----------
-const LOOPS: V2[][] = [
-  [[-12, -8], [-176, -8], [-176, -60], [-12, -60]],
-  [[-12, -60], [-12, -112], [-176, -112], [-176, -60]],
-  [[-4, -30], [215, -30], [215, -72], [-12, -72], [-12, -30]],
-];
-
-function loopSampler(points: V2[]) {
-  const closed = [...points, points[0]];
-  const lens = [0];
-  for (let i = 1; i < closed.length; i++) lens.push(lens[i - 1] + Math.hypot(closed[i][0] - closed[i - 1][0], closed[i][1] - closed[i - 1][1]));
-  const total = lens[lens.length - 1];
-  return (d: number) => {
-    d = ((d % total) + total) % total;
-    let i = 1;
-    while (lens[i] < d) i++;
-    const a = closed[i - 1];
-    const b = closed[i];
-    const f = (d - lens[i - 1]) / (lens[i] - lens[i - 1]);
-    return { x: a[0] + (b[0] - a[0]) * f, z: a[1] + (b[1] - a[1]) * f, heading: Math.atan2(-(b[1] - a[1]), b[0] - a[0]), total };
-  };
-}
-
-export function RoadTraffic() {
-  const vehicles = useMemo(
-    () =>
-      [0, 1, 2, 3, 4, 5, 6].map((i) => ({
-        loop: loopSampler(LOOPS[i % LOOPS.length]),
-        offset: i * 97,
-        speed: 7 + (i % 3) * 1.5,
-        cab: ['#e2574c', '#2f7fe0', '#f3f6f9', '#23a35a'][i % 4],
-        color: CONTAINER_COLORS[(i * 3) % CONTAINER_COLORS.length],
-        lane: i % 2 ? 1.6 : -1.6,
-      })),
-    [],
-  );
-  const refs = useRef<(THREE.Group | null)[]>([]);
-  const boxes = useRef<(THREE.Mesh | null)[]>([]);
-  const dist = useRef(0);
-  useFrame((_, dt) => {
-    const { speed, showAmbient } = useWorld.getState();
-    if (showAmbient) dist.current += Math.min(dt, 0.1) * speed;
-    vehicles.forEach((v, i) => {
-      const g = refs.current[i];
-      if (!g) return;
-      const p = v.loop(v.offset + dist.current * v.speed);
-      // Keep to one side of the road.
-      g.position.set(p.x + Math.sin(p.heading) * v.lane, LAND_Y, p.z + Math.cos(p.heading) * v.lane);
-      g.rotation.y = p.heading;
-      g.scale.setScalar(0.85);
-      const b = boxes.current[i];
-      if (b) (b.material as THREE.MeshStandardMaterial).color.setHex(v.color);
+// ---------- scheduled road logistics ----------
+/** Port shuttles and delivery trucks from the logistics timetable (pooled, shown when on the road). */
+export function RoadTrucks() {
+  const logistics = useLogistics();
+  const refs = useRef<TruckRefs[]>([]);
+  useFrame(() => {
+    logistics.trucks.forEach((t, i) => {
+      const r = refs.current[i];
+      if (!r?.group) return;
+      r.group.visible = t.active;
+      if (!t.active) return;
+      r.group.position.set(t.x, LAND_Y, t.z);
+      r.group.rotation.y = t.heading;
+      if (r.box) {
+        r.box.visible = t.carrying !== null;
+        if (t.carrying !== null) (r.box.material as THREE.MeshStandardMaterial).color.setHex(t.carrying);
+      }
     });
   });
   return (
     <>
-      {vehicles.map((v, i) => (
-        <TruckModel key={i} cab={v.cab} ref={(el) => (refs.current[i] = el)} boxRef={(el) => (boxes.current[i] = el)} chassis={i % 2 ? 'box' : 'trailer'} />
-      ))}
+      {logistics.trucks.map((t, i) => {
+        refs.current[i] ??= { group: null, box: null };
+        return (
+          <TruckModel
+            key={t.id}
+            cab={t.id % 3 === 0 ? '#f2b705' : t.id % 3 === 1 ? '#e2574c' : '#2f7fe0'}
+            ref={(el) => (refs.current[i].group = el)}
+            boxRef={(el) => (refs.current[i].box = el)}
+          />
+        );
+      })}
     </>
   );
 }

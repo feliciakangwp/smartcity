@@ -8,6 +8,8 @@ import { activeIntegrations, activeSystems, integrationsFor, isShared, owningDiv
 import { DATA_TYPE_COLORS, type Integration } from '@/types/domain';
 import { SHIP_STATES } from '@/sim/maritime';
 import { currentSim } from '@/world/maritime/SimContext';
+import { buildState } from '@/lib/systemAge';
+import { LEGACY_AGE_YEARS } from '@/types/domain';
 import { Button, Chip, StatusChip, ZoneSwatch, cx } from '@/components/ui';
 
 export function InfoPanel() {
@@ -65,7 +67,7 @@ function ZoneDetails({ id }: { id: string }) {
                   onClick={() => select({ kind: 'system', id: s.id }, true)}
                   className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-harbor-50"
                 >
-                  <span className="w-11 shrink-0 font-mono text-xs font-semibold text-navy-700">{s.acronym}</span>
+                  <span className="min-w-[2.75rem] shrink-0 font-mono text-xs font-semibold text-navy-700">{s.acronym}</span>
                   <span className="min-w-0 flex-1 truncate">{s.name}</span>
                   <StatusChip status={s.status} />
                 </button>
@@ -82,7 +84,7 @@ function ZoneDetails({ id }: { id: string }) {
             {usesElsewhere.map((s) => (
               <li key={s.id}>
                 <button type="button" onClick={() => select({ kind: 'system', id: s.id }, true)} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-harbor-50">
-                  <span className="w-11 shrink-0 font-mono text-xs font-semibold text-navy-700">{s.acronym}</span>
+                  <span className="min-w-[2.75rem] shrink-0 font-mono text-xs font-semibold text-navy-700">{s.acronym}</span>
                   <span className="min-w-0 flex-1 truncate">{s.name}</span>
                   {isShared(s, zones) && <Chip color="#0d9488">Shared</Chip>}
                 </button>
@@ -117,6 +119,8 @@ function SystemDetails({ id }: { id: string }) {
   const setImpact = useWorld((s) => s.setImpactSystem);
   const impactId = useWorld((s) => s.impactSystemId);
   const setExpanded = useWorld((s) => s.setDashboardExpanded);
+  const moduleId = useWorld((s) => s.selectedModuleId);
+  const selectModule = useWorld((s) => s.selectModule);
   const navigate = useNavigate();
   if (!system) return <p className="text-sm text-ink-500">This system is no longer in the register.</p>;
 
@@ -175,6 +179,38 @@ function SystemDetails({ id }: { id: string }) {
         </div>
       </div>
       <p className="text-sm text-ink-700">{system.businessPurpose || system.description}</p>
+      <BuildSummary system={system} />
+      {(system.modules?.length ?? 0) > 0 && (
+        <section className="flex flex-col gap-2" aria-label="Modules">
+          <div className="flex items-baseline justify-between">
+            <h3 className="text-sm font-semibold">Modules ({system.modules!.length})</h3>
+            {moduleId && (
+              <button type="button" className="text-xs font-semibold text-harbor-500 hover:underline" onClick={() => selectModule(system.id, null)}>
+                Show all users
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-ink-500">Select a module to highlight only the divisions that use it.</p>
+          <ul className="flex flex-col gap-1">
+            {system.modules!.map((m) => {
+              const on = m.id === moduleId;
+              return (
+                <li key={m.id}>
+                  <button
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => selectModule(system.id, on ? null : m.id)}
+                    className={cx('flex w-full flex-col gap-1 rounded-md border px-2 py-1.5 text-left text-sm', on ? 'border-nexus-400 bg-nexus-100' : 'border-transparent hover:bg-harbor-50')}
+                  >
+                    <span className="font-medium">{m.name}</span>
+                    <span className="flex flex-wrap gap-1">{usingDivisions(system, zones, m.id).map(zoneChip)}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
       <section className="flex flex-col gap-2 rounded-md border border-ink-200 bg-harbor-50/60 p-3" aria-label="Ownership and usage">
         <h3 className="text-sm font-semibold">Ownership and usage</h3>
         <dl className="grid grid-cols-[104px_1fr] items-start gap-x-3 gap-y-2 text-sm">
@@ -326,4 +362,29 @@ function craneText(phase: string) {
       hoistDrop: 'Raising spreader',
     } as Record<string, string>
   )[phase] ?? phase;
+}
+
+function BuildSummary({ system }: { system: Parameters<typeof buildState>[0] }) {
+  const b = buildState(system);
+  if (b.developing)
+    return (
+      <div className="flex flex-col gap-1.5" aria-label="Build progress">
+        <div className="flex justify-between text-sm">
+          <span className="font-semibold">{b.progress === 0 ? 'Not started' : 'Under development'}</span>
+          <span className="num text-ink-700">
+            {b.progress}% developed{system.yearIntroduced ? ` · target ${system.yearIntroduced}` : ''}
+          </span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-ink-100" role="progressbar" aria-valuenow={b.progress} aria-valuemin={0} aria-valuemax={100}>
+          <div className="h-full rounded-full bg-harbor-500" style={{ width: `${b.progress}%` }} />
+        </div>
+      </div>
+    );
+  if (!system.yearIntroduced) return null;
+  return (
+    <p className="text-sm text-ink-700">
+      Live since <b>{system.yearIntroduced}</b> · <span className="num">{b.age}</span> year{b.age === 1 ? '' : 's'}{' '}
+      {b.legacy ? <Chip color="#9a6b4f">Legacy (over {LEGACY_AGE_YEARS} years)</Chip> : <Chip color="#22c3e6">New</Chip>}
+    </p>
+  );
 }

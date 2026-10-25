@@ -7,7 +7,7 @@ export interface Selection {
   kind: SelectionKind;
   id: string;
 }
-export type FocusKind = 'home' | 'zone' | 'system' | 'ship';
+export type FocusKind = 'home' | 'zone' | 'system' | 'ship' | 'place';
 export interface FocusRequest {
   kind: FocusKind;
   id?: string;
@@ -31,13 +31,17 @@ interface WorldState {
   addSystemZone: string | null;
   systemFilter: SystemFilter;
   showCrossDivision: boolean;
+  showSchedule: boolean;
+  /** Module of the selected system whose users are highlighted (e.g. one of eCustoms' modules). */
+  selectedModuleId: string | null;
 
+  selectModule: (systemId: string, moduleId: string | null) => void;
   setSystemFilter: (f: SystemFilter) => void;
   openAddSystem: (zoneId: string | null) => void;
   select: (s: Selection | null, focus?: boolean) => void;
   setHovered: (id: string | null) => void;
   focusOn: (kind: FocusKind, id?: string) => void;
-  toggle: (key: 'showLabels' | 'showLines' | 'showAmbient' | 'showCrossDivision') => void;
+  toggle: (key: 'showLabels' | 'showLines' | 'showAmbient' | 'showCrossDivision' | 'showSchedule') => void;
   setSpeed: (s: Speed) => void;
   setDashboardExpanded: (v: boolean) => void;
   setImpactSystem: (id: string | null) => void;
@@ -60,6 +64,10 @@ export const useWorld = create<WorldState>()((set) => ({
   addSystemZone: null,
   systemFilter: 'all',
   showCrossDivision: false,
+  showSchedule: !isMobile,
+  selectedModuleId: null,
+
+  selectModule: (systemId, selectedModuleId) => set({ selection: { kind: 'system', id: systemId }, selectedModuleId }),
 
   setSystemFilter: (systemFilter) => set({ systemFilter }),
 
@@ -68,6 +76,7 @@ export const useWorld = create<WorldState>()((set) => ({
   select: (selection, focus = false) =>
     set((s) => ({
       selection,
+      selectedModuleId: selection?.kind === 'system' && selection.id === s.selection?.id ? s.selectedModuleId : null,
       focus: focus && selection ? { kind: selection.kind, id: selection.id, nonce: s.focus.nonce + 1 } : s.focus,
     })),
   setHovered: (hovered) => set({ hovered }),

@@ -99,10 +99,12 @@ export const useLandscape = create<LandscapeStore>()(
       name: DEMO_STORAGE_KEY,
       version: SEED_VERSION,
       storage: createJSONStorage(() => safeStorage),
-      // v1 → v2: ownership/usage fields, zone kinds, Shared Services Hub. Keeps every user edit.
+      // v3 re-laid the port on a map of Singapore and replaced the placeholder systems, so
+      // older saved layouts (whose plots no longer exist) restart from the new seed. Branding is kept.
       migrate: (persisted, version) => {
         const state = persisted as Partial<LandscapeData>;
-        return (version < 2 ? { ...upgradeLandscape(state), version: SEED_VERSION } : state) as LandscapeStore;
+        if (version < 3) return { ...createSeed(), platform: { ...createSeed().platform, ...(state.platform ?? {}), mapRings: 0 } } as LandscapeStore;
+        return upgradeLandscape(state) as LandscapeStore;
       },
       partialize: (s) => {
         const { zones, plots, systems, integrations, journeys, ships, berths, simulation, platform, version } = s;

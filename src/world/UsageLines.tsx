@@ -25,6 +25,7 @@ export function UsageLines() {
   const selection = useWorld((s) => s.selection);
   const showAll = useWorld((s) => s.showCrossDivision);
   const filter = useWorld((s) => s.systemFilter);
+  const moduleId = useWorld((s) => s.selectedModuleId);
   const systems = useLandscape((s) => s.systems);
   const zones = useLandscape((s) => s.zones);
   const { layouts, placements } = useWorldLayout();
@@ -40,7 +41,7 @@ export function UsageLines() {
       if (!mine && !(showAll && matchesFilter(s, zones, filter === 'all' ? 'shared' : filter))) continue;
       const p = placements.get(s.id);
       if (!p) continue;
-      for (const zid of usingDivisions(s, zones)) {
+      for (const zid of usingDivisions(s, zones, mine ? moduleId : null)) {
         const l = layoutById.get(zid);
         if (!l) continue;
         if (mine) rings.set(zid, { x: l.plot.x, z: l.plot.z, color: l.zone.color, r: Math.min(l.width, l.depth) * 0.42 });
@@ -57,7 +58,7 @@ export function UsageLines() {
       }
     }
     return { trails, rings: [...rings.entries()] };
-  }, [systems, zones, layouts, placements, selectedId, showAll, filter]);
+  }, [systems, zones, layouts, placements, selectedId, showAll, filter, moduleId]);
 
   return (
     <>

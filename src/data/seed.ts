@@ -1,217 +1,122 @@
-// Demo Mode seed. System names are generic placeholders, not real architecture.
-import type {
-  Integration,
-  Journey,
-  LandscapeData,
-  ShipConfig,
-  System,
-  Zone,
-} from '@/types/domain';
+// Demo Mode seed: the agency's systems placed on a stylised Singapore.
+// Go-live years and eCustoms module names/usage are placeholders to confirm.
+import type { LandscapeData, ShipConfig, System, SystemModule, Zone } from '@/types/domain';
 import { DEFAULT_PLOTS } from './layout';
 
-export const SEED_VERSION = 2;
-const STAMP = '2026-10-01T09:00:00.000Z';
+export const SEED_VERSION = 3;
+const STAMP = '2026-10-25T09:00:00.000Z';
 const audit = { createdAt: STAMP, updatedAt: STAMP, archived: false };
 
 export const uid = (prefix: string, n: number) => `${prefix}000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
 const Z = (n: number) => uid('a0', n);
 const S = (n: number) => uid('b0', n);
-const I = (n: number) => uid('c0', n);
 
-/** Plot used by the Shared Services Hub: behind the container yard, central to the port. */
-export const SHARED_HUB_PLOT_ID = DEFAULT_PLOTS[9].id;
+const plotByLabel = (label: string) => DEFAULT_PLOTS.find((p) => p.label.startsWith(label))!.id;
+
 export const SHARED_HUB_ZONE_ID = Z(7);
+export const SHARED_HUB_PLOT_ID = plotByLabel('Shared Centre');
 
-export const sharedHubZone = (): Zone => ({
-  id: SHARED_HUB_ZONE_ID,
-  name: 'Shared Services Hub',
-  description: 'Enterprise-wide systems used across several divisions and not owned by any single one.',
-  color: '#0d9488',
-  theme: 'shared',
-  kind: 'shared',
-  plotId: SHARED_HUB_PLOT_ID,
-  scale: 1,
-  visible: true,
-  sortOrder: 7,
-  ...audit,
+const zone = (n: number, name: string, description: string, color: string, theme: Zone['theme'], plot: string, sortOrder: number, kind: Zone['kind'] = 'division'): Zone => ({
+  id: Z(n), name, description, color, theme, kind, plotId: plotByLabel(plot), scale: 1, visible: true, sortOrder, ...audit,
 });
 
+export const sharedHubZone = (): Zone =>
+  zone(7, 'Shared Services Hub', 'Shared centre beside the Trade zone for systems used across divisions, such as eCustoms.', '#0d9488', 'shared', 'Shared Centre', 6, 'shared');
+
 const zones: Zone[] = [
-  { id: Z(1), name: 'Trade Gateway', description: 'Trader-facing systems: declarations, trader profiles and eService payments.', color: '#2f7fe0', theme: 'trade', kind: 'division', plotId: DEFAULT_PLOTS[2].id, scale: 1, visible: true, sortOrder: 1, ...audit },
-  { id: Z(2), name: 'Compliance Centre', description: 'Compliance rules, risk assessment, screening and inspection.', color: '#7c5ce0', theme: 'compliance', kind: 'division', plotId: DEFAULT_PLOTS[1].id, scale: 1, visible: true, sortOrder: 2, ...audit },
-  { id: Z(3), name: 'Enforcement HQ', description: 'Investigation, case management and intelligence analytics.', color: '#ec7a1c', theme: 'enforcement', kind: 'division', plotId: DEFAULT_PLOTS[0].id, scale: 1, visible: true, sortOrder: 3, ...audit },
-  { id: Z(4), name: 'Finance Treasury', description: 'Revenue collection, reconciliation and ledger interfaces.', color: '#23a35a', theme: 'finance', kind: 'division', plotId: DEFAULT_PLOTS[3].id, scale: 1, visible: true, sortOrder: 4, ...audit },
-  { id: Z(5), name: 'Traveller Checkpoint', description: 'Traveller declarations and GST processing.', color: '#e9b414', theme: 'traveller', kind: 'division', plotId: DEFAULT_PLOTS[4].id, scale: 1, visible: true, sortOrder: 5, ...audit },
-  { id: Z(6), name: 'Integration Hub', description: 'Shared integration, data exchange and cargo operations services.', color: '#2bb3c8', theme: 'integration', kind: 'division', plotId: DEFAULT_PLOTS[5].id, scale: 1, visible: true, sortOrder: 6, ...audit },
+  zone(1, 'Trade Gateway', 'Trade-facing systems for declarations and permits.', '#2f7fe0', 'trade', 'Bukit Timah', 1),
+  zone(2, 'Compliance Centre', 'Compliance and risk systems.', '#7c5ce0', 'compliance', 'Pioneer West', 2),
+  zone(3, 'Enforcement HQ', 'Investigation and enforcement systems.', '#ec7a1c', 'enforcement', 'Pioneer East', 3),
+  zone(4, 'Finance Treasury', 'Revenue and finance systems.', '#23a35a', 'finance', 'Marina', 4),
+  zone(5, 'Traveller Checkpoint', 'Traveller declarations and GST payments at Changi.', '#e9b414', 'traveller', 'Changi', 5),
   sharedHubZone(),
 ];
 
-type SysSeed = [n: number, zone: number, acronym: string, name: string, category: System['category'], status: System['status'], criticality: System['criticality'], purpose: string];
+const YEAR_NOTE = 'Go-live year is a placeholder until confirmed.';
+type SysSeed = {
+  n: number;
+  zone: number;
+  acronym: string;
+  name: string;
+  category: System['category'];
+  status: System['status'];
+  criticality: System['criticality'];
+  year: number;
+  progress?: number;
+  purpose: string;
+};
 
 const sysSeeds: SysSeed[] = [
-  [1, 1, 'TRD', 'Trader (External Party)', 'External System', 'Live', 'Medium', 'Represents traders and agents submitting declarations from outside the agency.'],
-  [2, 1, 'TDP', 'Trade Declaration Portal', 'Frontend / eService', 'Live', 'High', 'Online channel for lodging and amending trade declarations.'],
-  [3, 1, 'TPR', 'Trader Profile Registry', 'Data Repository', 'Live', 'Medium', 'Master record of registered traders, licences and risk profiles.'],
-  [4, 1, 'EPP', 'eService Payment Portal', 'Frontend / eService', 'Live', 'High', 'Online payment channel for duties, fees and penalties.'],
-  [5, 2, 'CRE', 'Compliance Rules Engine', 'Compliance', 'Live', 'Mission Critical', 'Applies rules and risk scoring to every declaration.'],
-  [6, 2, 'CSI', 'Cargo Screening & Inspection', 'Compliance', 'Enhancement', 'High', 'Schedules and records physical inspection and scanning results.'],
-  [7, 3, 'ECM', 'Enforcement Case Management', 'Enforcement', 'Live', 'High', 'Manages referrals, investigations and enforcement outcomes.'],
-  [8, 3, 'IAP', 'Intelligence Analytics Platform', 'Analytics', 'In Development', 'Medium', 'Analyses case and trade data to surface emerging risks.'],
-  [9, 4, 'RCS', 'Revenue Collection System', 'Finance', 'Live', 'Mission Critical', 'Calculates and collects duties, taxes and fees.'],
-  [10, 4, 'RCN', 'Reconciliation Engine', 'Finance', 'Live', 'High', 'Matches collections against bank settlements every day.'],
-  [11, 4, 'GLI', 'General Ledger Interface', 'Finance', 'Sunsetting', 'Medium', 'Posts reconciled revenue to the finance ledger.'],
-  [12, 5, 'TVL', 'Traveller (External Party)', 'External System', 'Live', 'Low', 'Represents travellers declaring goods on arrival.'],
-  [13, 5, 'TDS', 'Traveller Declaration Service', 'Frontend / eService', 'Live', 'High', 'Captures traveller declarations through app and kiosk.'],
-  [14, 5, 'GSA', 'GST Assessment Engine', 'Core Processing', 'Live', 'High', 'Calculates GST payable on declared goods.'],
-  [15, 6, 'IEX', 'Integration Exchange', 'Integration', 'Live', 'Mission Critical', 'Shared message broker and API gateway between systems.'],
-  [16, 6, 'CDR', 'Common Data Repository', 'Data Repository', 'Live', 'High', 'Shared store of reference and historical transaction data.'],
-  [17, 6, 'COP', 'Cargo Operations Platform', 'Core Processing', 'Live', 'High', 'Tracks cargo status and release instructions.'],
-  [18, 6, 'CTS', 'Container Terminal System', 'External System', 'Live', 'High', 'Terminal operator system that plans yard moves and vessel loading.'],
-  [19, 6, 'VMI', 'Vessel Manifest Interface', 'External System', 'Planned', 'Medium', 'Exchanges load lists and manifests with shipping lines.'],
+  { n: 1, zone: 1, acronym: 'eServices', name: 'Customs eServices', category: 'Frontend / eService', status: 'Live', criticality: 'High', year: 2012, purpose: 'Online services for traders.' },
+  { n: 2, zone: 1, acronym: 'TradeNet4.1', name: 'TradeNet 4.1', category: 'Core Processing', status: 'Live', criticality: 'Mission Critical', year: 2014, purpose: 'Current trade declaration and permit platform.' },
+  { n: 3, zone: 1, acronym: 'TradeNet5.0', name: 'TradeNet 5.0', category: 'Core Processing', status: 'Live', criticality: 'Mission Critical', year: 2025, purpose: 'Next-generation trade declaration and permit platform.' },
+  { n: 4, zone: 2, acronym: 'CORDIS', name: 'CORDIS', category: 'Compliance', status: 'Planned', criticality: 'High', year: 2027, progress: 0, purpose: 'New compliance system. Development has not started.' },
+  { n: 5, zone: 4, acronym: 'ORION', name: 'ORION', category: 'Finance', status: 'In Development', criticality: 'High', year: 2026, progress: 60, purpose: 'New finance system, 60% developed.' },
+  { n: 6, zone: 4, acronym: 'POLARIS', name: 'POLARIS', category: 'Finance', status: 'In Development', criticality: 'High', year: 2028, progress: 5, purpose: 'New finance system, 5% developed.' },
+  { n: 7, zone: 5, acronym: 'Kiosk', name: 'Kiosk', category: 'Frontend / eService', status: 'Live', criticality: 'Medium', year: 2016, purpose: 'Self-service kiosks for travellers at the checkpoint.' },
+  { n: 8, zone: 5, acronym: 'Customs@SG', name: 'Customs@SG', category: 'Frontend / eService', status: 'Live', criticality: 'High', year: 2019, purpose: 'Traveller declarations and GST payments.' },
+  { n: 9, zone: 3, acronym: 'C2iS', name: 'C2iS', category: 'Enforcement', status: 'Live', criticality: 'High', year: 2013, purpose: 'Enforcement system.' },
 ];
 
-// Common Data Repository is used beyond its owner but stays displayed in its own zone:
-// multiple users alone never move a system into the Shared Services Hub.
-const extraUsers: Record<number, number[]> = { 16: [3, 4] };
+const divisionIds = [Z(1), Z(2), Z(3), Z(4), Z(5)];
 
-const systems: System[] = sysSeeds.map(([n, zone, acronym, name, category, status, criticality, purpose]) => ({
-  id: S(n),
-  name,
-  acronym,
-  description: `${name} (placeholder for demonstration).`,
-  zoneId: Z(zone),
-  owningZoneId: Z(zone),
-  usingZoneIds: [Z(zone), ...(extraUsers[n] ?? []).map(Z)],
-  businessPurpose: purpose,
-  category,
-  status,
-  criticality,
-  docs: [],
-  ...audit,
-}));
+/** eCustoms: one system, one campus building, 13 modules with their own users (placeholder names and usage). */
+export const ECUSTOMS_MODULES = (): SystemModule[] =>
+  Array.from({ length: 13 }, (_, i) => {
+    const users = new Set([divisionIds[i % 5], divisionIds[(i + 2) % 5]]);
+    if (i % 3 === 0) users.add(divisionIds[(i + 1) % 5]);
+    return { id: uid('e1', i + 1), name: `Module ${String(i + 1).padStart(2, '0')}`, usingZoneIds: [...users] };
+  });
 
-export const SHARED_DEMO_SYSTEM_ID = S(20);
+const systems: System[] = [
+  ...sysSeeds.map((s) => ({
+    id: S(s.n),
+    name: s.name,
+    acronym: s.acronym,
+    description: YEAR_NOTE,
+    zoneId: Z(s.zone),
+    owningZoneId: Z(s.zone),
+    usingZoneIds: [Z(s.zone)],
+    businessPurpose: s.purpose,
+    category: s.category,
+    status: s.status,
+    criticality: s.criticality,
+    yearIntroduced: s.year,
+    buildProgress: s.progress,
+    docs: [],
+    ...audit,
+  })),
+  {
+    id: S(10),
+    name: 'eCustoms',
+    acronym: 'eCustoms',
+    description: `Shared across divisions through 13 modules. Module names and which divisions use each are placeholders. ${YEAR_NOTE}`,
+    zoneId: SHARED_HUB_ZONE_ID,
+    owningZoneId: null,
+    usingZoneIds: [...new Set(ECUSTOMS_MODULES().flatMap((m) => m.usingZoneIds))],
+    businessPurpose: 'Customs platform whose modules serve several divisions.',
+    category: 'Core Processing',
+    status: 'Live',
+    criticality: 'Mission Critical',
+    yearIntroduced: 2017,
+    modules: ECUSTOMS_MODULES(),
+    docs: [],
+    ...audit,
+  },
+];
 
-/** Illustrative cross-division system: one record, one building, three using divisions. */
-export const sharedDemoSystem = (): System => ({
-  id: SHARED_DEMO_SYSTEM_ID,
-  name: 'Shared Case Management System',
-  acronym: 'SCMS',
-  description: 'Illustrative demonstration data: a case management platform shared by trade, compliance and enforcement teams.',
-  zoneId: SHARED_HUB_ZONE_ID,
-  owningZoneId: null,
-  usingZoneIds: [Z(1), Z(2), Z(3)],
-  businessPurpose: 'Demonstration only. One case record that several divisions work on, instead of each division keeping its own copy.',
-  category: 'Core Processing',
-  status: 'In Development',
-  criticality: 'High',
-  docs: [],
-  ...audit,
+const ship = (n: number, name: string, portId: string, hullColor: string, bays: number, rows: number, tiers: number, unloadCount: number, loadCount: number, seaTime: number): ShipConfig => ({
+  id: uid('20', n), name, portId, hullColor, bays, rows, tiers, unloadCount, loadCount, seaTime,
 });
-systems.push(sharedDemoSystem());
-
-type IntSeed = [n: number, from: number, to: number, name: string, dataType: Integration['dataType'], mechanism: Integration['mechanism'], trigger: string, description: string, via?: number[], extra?: Partial<Integration>];
-
-const intSeeds: IntSeed[] = [
-  [1, 1, 2, 'Lodge trade declaration', 'Transaction', 'REST API', 'Trader submits a declaration', 'Trader lodges a declaration through the portal.'],
-  [2, 2, 5, 'Declaration for compliance check', 'Compliance', 'Event / Message Queue', 'Declaration accepted by the portal', 'Accepted declarations are published for rules and risk assessment.', [15]],
-  [3, 5, 7, 'Referral for investigation', 'Exception', 'Event / Message Queue', 'Risk score above referral threshold', 'High-risk declarations are referred to enforcement.'],
-  [4, 5, 9, 'Duty and tax assessment', 'Transaction', 'REST API', 'Declaration has duty or tax payable', 'Assessed amounts are sent for collection.'],
-  [5, 5, 17, 'Clearance outcome', 'Clearance / Approval', 'Event / Message Queue', 'Declaration cleared', 'Clearance outcome is shared with cargo operations.', [15]],
-  [6, 3, 5, 'Trader risk profile', 'Compliance', 'Database Interface', 'Rules engine evaluates a declaration', 'Rules engine reads the trader profile during assessment.'],
-  [7, 12, 13, 'Traveller declaration', 'Transaction', 'REST API', 'Traveller declares goods', 'Traveller submits a declaration in the app or at a kiosk.'],
-  [8, 13, 14, 'GST assessment request', 'Pending Processing', 'REST API', 'Declaration includes dutiable goods', 'Declared goods are sent for GST calculation.'],
-  [9, 14, 9, 'GST payable', 'Transaction', 'REST API', 'GST calculated', 'GST payable is raised for collection.'],
-  [10, 9, 13, 'Payment confirmation', 'Clearance / Approval', 'Event / Message Queue', 'Payment received', 'Payment confirmation is returned to the traveller service.'],
-  [11, 17, 18, 'Release instruction', 'Clearance / Approval', 'REST API', 'Cargo released by the agency', 'Release status is sent to the terminal. The terminal still plans and authorises loading itself.'],
-  [12, 18, 19, 'Load list update', 'Pending Processing', 'File Transfer', 'Terminal finalises the stowage plan', 'Load list and stowage updates go to the vessel side.'],
-  [13, 4, 9, 'eService payment', 'Transaction', 'REST API', 'Payment made online', 'Online payments are posted to revenue collection.'],
-  [14, 9, 10, 'Daily collections batch', 'Transaction', 'Batch', 'End of business day', 'Collections are batched for reconciliation.'],
-  [15, 10, 11, 'Reconciled postings', 'Transaction', 'File Transfer', 'Reconciliation complete', 'Reconciled totals are posted to the ledger.'],
-  [16, 6, 5, 'Inspection results', 'Compliance', 'REST API', 'Inspection completed', 'Inspection findings update the compliance assessment.', undefined, { direction: 'bidirectional' }],
-  [17, 7, 8, 'Case data for analytics', 'Compliance', 'Batch', 'Nightly', 'Case outcomes feed the analytics platform.', undefined, { status: 'Planned' }],
-  [18, 17, 16, 'Cargo events', 'Transaction', 'Event / Message Queue', 'Cargo status changes', 'Cargo events are stored for reporting.'],
-  [19, 14, 16, 'Traveller GST records', 'Transaction', 'Batch', 'Nightly', 'Assessed traveller GST records are archived.'],
-];
-
-const integrations: Integration[] = intSeeds.map(([n, from, to, name, dataType, mechanism, trigger, description, via, extra]) => ({
-  id: I(n),
-  name,
-  sourceId: S(from),
-  destinationId: S(to),
-  dataType,
-  mechanism,
-  direction: 'one-way',
-  description,
-  trigger,
-  status: 'Live',
-  via: (via ?? []).map(S),
-  ...audit,
-  ...extra,
-}));
-
-let stepN = 0;
-let branchN = 0;
-const steps = (ints: [number, string][]) =>
-  ints.map(([i, label], order) => ({ id: uid('e0', ++stepN), order, integrationId: I(i), label }));
-
-const journeyA = steps([[1, 'Trader lodges declaration'], [2, 'Declaration sent for compliance check']]);
-const journeys: Journey[] = [
-  {
-    id: uid('d0', 1),
-    code: 'A',
-    name: 'Trade Declaration',
-    description: 'A trader declaration moves through compliance and branches to enforcement, finance or cargo operations.',
-    published: true,
-    speed: 1,
-    steps: journeyA,
-    branches: [
-      { id: uid('f0', ++branchN), afterStepId: journeyA[1].id, condition: 'Risk score above threshold', integrationId: I(3) },
-      { id: uid('f0', ++branchN), afterStepId: journeyA[1].id, condition: 'Duty or tax payable', integrationId: I(4) },
-      { id: uid('f0', ++branchN), afterStepId: journeyA[1].id, condition: 'Declaration cleared', integrationId: I(5) },
-    ],
-    ...audit,
-  },
-  {
-    id: uid('d0', 2),
-    code: 'B',
-    name: 'Traveller GST',
-    description: 'A traveller declaration is assessed for GST, collected, and confirmed back to the traveller service.',
-    published: true,
-    speed: 1,
-    steps: steps([[7, 'Traveller declares goods'], [8, 'GST assessed'], [9, 'GST raised for collection'], [10, 'Payment confirmed']]),
-    branches: [],
-    ...audit,
-  },
-  {
-    id: uid('d0', 3),
-    code: 'C',
-    name: 'Cargo Operations',
-    description: 'Clearance informs cargo operations and the terminal. Clearance is not automatic loading permission; the terminal plans loading.',
-    published: true,
-    speed: 1,
-    steps: steps([[5, 'Clearance outcome shared'], [11, 'Release instruction to terminal'], [12, 'Load list to vessel']]),
-    branches: [],
-    ...audit,
-  },
-  {
-    id: uid('d0', 4),
-    code: 'D',
-    name: 'Revenue Reconciliation',
-    description: 'Online payments are collected, reconciled daily and posted to the ledger.',
-    published: true,
-    speed: 1,
-    steps: steps([[13, 'eService payment'], [14, 'Daily collections batch'], [15, 'Reconciled postings']]),
-    branches: [],
-    ...audit,
-  },
-];
 
 const ships: ShipConfig[] = [
-  { id: uid('20', 1), name: 'MV Nexus Pioneer', hullColor: '#1d3b6e', bays: 7, rows: 4, tiers: 3, unloadCount: 7, loadCount: 5, seaTime: 35 },
-  { id: uid('20', 2), name: 'MV Harbour Spirit', hullColor: '#a8323a', bays: 5, rows: 3, tiers: 3, unloadCount: 5, loadCount: 4, seaTime: 50 },
-  { id: uid('20', 3), name: 'MV Coral Feeder', hullColor: '#1f7470', bays: 3, rows: 3, tiers: 2, unloadCount: 3, loadCount: 3, seaTime: 25 },
+  ship(1, 'MV Nexus Pioneer', 'tuas', '#1d3b6e', 7, 4, 3, 7, 5, 30),
+  ship(2, 'MV Harbour Spirit', 'tuas', '#a8323a', 5, 3, 3, 5, 4, 40),
+  ship(3, 'MV Coral Feeder', 'tuas', '#1f7470', 3, 3, 2, 3, 3, 25),
+  ship(4, 'MV Merlion Star', 'queenstown', '#24456b', 7, 4, 3, 6, 5, 35),
+  ship(5, 'MV Straits Trader', 'queenstown', '#6b4a1f', 5, 3, 3, 5, 4, 30),
+  ship(6, 'MV Lion City', 'queenstown', '#5b2c83', 3, 3, 2, 3, 3, 45),
 ];
 
 export function createSeed(): LandscapeData {
@@ -220,13 +125,14 @@ export function createSeed(): LandscapeData {
     zones,
     plots: DEFAULT_PLOTS,
     systems,
-    integrations,
-    journeys,
+    integrations: [],
+    journeys: [],
     ships,
     berths: [
-      { id: uid('30', 1), name: 'Berth 1', x: 45 },
-      { id: uid('30', 2), name: 'Berth 2', x: 110 },
-      { id: uid('30', 3), name: 'Berth 3', x: 175 },
+      { id: uid('30', 1), name: 'Tuas Berth 1', portId: 'tuas', x: -385 },
+      { id: uid('30', 2), name: 'Tuas Berth 2', portId: 'tuas', x: -312 },
+      { id: uid('30', 3), name: 'Queenstown Berth 1', portId: 'queenstown', x: -92 },
+      { id: uid('30', 4), name: 'Queenstown Berth 2', portId: 'queenstown', x: -22 },
     ],
     simulation: { ambientEnabled: true, defaultSpeed: 1 },
     platform: { name: 'PORT NEXUS', tagline: 'Connecting Systems. Moving Information.', quality: 'auto', mapRings: 0 },
