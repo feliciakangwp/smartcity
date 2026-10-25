@@ -5,7 +5,6 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { AIRPORT, LAND_Y } from '@/data/layout';
 import { boxGeo, cylGeo, mat } from '../materials';
-import { Label } from '../Label';
 import { useAirport } from '../maritime/SimContext';
 
 export function Airport() {
@@ -58,7 +57,6 @@ function AirportGround() {
         <mesh position={[0, 23.5, 0]} geometry={cylGeo(4, 3, 3, 14)} material={mat('#2c4a63', { roughness: 0.2, metalness: 0.3 })} castShadow />
         <mesh position={[0, 25.6, 0]} geometry={cylGeo(4.4, 4.4, 1.2, 14)} material={mat('#f3f6f9')} />
       </group>
-      <Label position={[t.x, 30, t.z]} text="Changi Airport" border="#1f56a3" height={0.032} />
     </group>
   );
 }

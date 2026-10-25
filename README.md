@@ -66,8 +66,8 @@ The migration and seed were checked against PostgreSQL 16:
 
 ## Using the Port World
 
-- **Navigate:** drag to rotate, scroll to zoom, right-drag (or two-finger drag) to pan. The toolbar has **Home view**, **Reset**, **Labels**, **Integration lines**, **Ambient animations** and **Fullscreen**.
-- **Search** for a zone, system acronym, ship or place (Tuas Port, Queenstown Port, Changi Airport) to fly the camera to it.
+- **Navigate:** grab and drag the map to move it (open-hand cursor; one finger on touch screens), right-drag to rotate (two fingers on touch), scroll or pinch to zoom. The toolbar has **Home view**, **Reset**, **Labels**, **Integration lines**, **Ambient animations** and **Fullscreen**.
+- **Search** for a zone, system acronym, ship or place (Jurong Port, PSA, Changi Airport) to fly the camera to it.
 - **Operations schedule** (right-hand panel, calendar button in the toolbar): flight arrivals and aircraft at gates, each port's berths, ships waiting at anchorage, inbound ships and ships at sea, and the next truck departures. It is a simulated timetable, not live data.
 - **Click a zone** to focus it. Other zones are subdued and the panel lists its systems, with **Add system**.
 - **Click a building** to open its system panel: purpose, owner, incoming and outgoing integrations, **View data flow** and **View impact**. Connected systems light up and their integration arcs appear. **Double-click** to fly in.
@@ -109,8 +109,8 @@ The map is traced from a reference map of Singapore (`src/data/layout.ts`): map 
 
 | Where | What |
 | --- | --- |
-| Tuas (west) and Queenstown / Pasir Panjang (south) | The two container ports. Each has 2 berths, quay cranes, a yard and 3 ships. |
-| Tuas → Pioneer → Jurong → Queenstown | Port highway with container shuttles between the two ports |
+| Tuas (west) and Queenstown / Pasir Panjang (south) | The two container ports, **Jurong Port** and **PSA**. Each has 2 berths, quay cranes, a yard and 3 ships. |
+| Jurong Port → Pioneer → Jurong → PSA | Port highway with container shuttles between the two ports |
 | Pioneer | Compliance Centre and Enforcement HQ |
 | Between Bukit Timah and Serangoon | Trade Gateway, with the Shared Services Hub (eCustoms) beside it |
 | Marina / CBD | Finance Treasury (location not given in the brief; easy to move in Studio → Zones) |
@@ -121,7 +121,7 @@ Spare plots open with **Expand port map**: Jurong West, Sembawang, Ang Mo Kio an
 ### Timetabled activity (simulated)
 
 - **Ships:** each port has 2 berths and 3 ships, so at busy times one waits at anchorage. Ships approach from the strait, berth, unload and load, then leave.
-- **Port shuttles:** a container truck leaves every 9 seconds, alternating Tuas → Queenstown and Queenstown → Tuas. The container moves from one yard to the other.
+- **Port shuttles:** a container truck leaves every 9 seconds, alternating Jurong Port → PSA and PSA → Jurong Port. The container moves from one yard to the other.
 - **Deliveries:** a truck leaves a port every 4.5 seconds for a town (Woodlands, Punggol, Bedok, CBD and others), unloads and drives back. Trucks keep left.
 - **Flights:** an arrival every 22 seconds lands on the western runway, taxis to one of 4 gates and stays about 28 seconds. Ten passengers walk from the gate through the Traveller Checkpoint counters, then the aircraft departs from the eastern runway.
 
@@ -182,7 +182,7 @@ src/
   world/                   React Three Fiber scene
     PortScene.tsx          Canvas, lights, sky, adaptive quality
     Ocean.tsx              Wave shader (+ matching JS wave function for bobbing)
-    Terrain.tsx            Island, port terminals, expressways, town blocks, trees, place names, buoys
+    Terrain.tsx            Island, port terminals, expressways, town blocks, trees, buoys
     airport/               Changi runways, terminal, aircraft and travellers
     ZoneDistrict.tsx       Zone slab, landmark, buildings, label
     zoneThemes.tsx         Landmarks: entry gates, scanning gantry, secure compound, plaza, canopy, conveyor

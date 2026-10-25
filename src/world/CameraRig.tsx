@@ -60,14 +60,33 @@ export function CameraRig() {
 
   useEffect(() => {
     if (!controls) return;
-    const stop = () => (goal.current = null);
-    controls.addEventListener('start', stop);
-    return () => controls.removeEventListener('start', stop);
+    const start = () => {
+      goal.current = null;
+      document.body.dataset.worldDragging = '1';
+    };
+    const end = () => delete document.body.dataset.worldDragging;
+    controls.addEventListener('start', start);
+    controls.addEventListener('end', end);
+    return () => {
+      controls.removeEventListener('start', start);
+      controls.removeEventListener('end', end);
+      end();
+    };
   }, [controls]);
 
   useFrame((_, dt) => {
+    if (!controls) return;
+    // Keep panning over Singapore: clamp the look-at point and move the camera with it.
+    const t = controls.target;
+    const cx = THREE.MathUtils.clamp(t.x, -520, 520);
+    const cz = THREE.MathUtils.clamp(t.z, -280, 380);
+    if (cx !== t.x || cz !== t.z) {
+      camera.position.x += cx - t.x;
+      camera.position.z += cz - t.z;
+      t.set(cx, t.y, cz);
+    }
     const g = goal.current;
-    if (!g || !controls) return;
+    if (!g) return;
     if (g.followShip) {
       const ship = sim.ships.find((s) => s.cfg.id === g.followShip);
       if (!ship) return void (goal.current = null);

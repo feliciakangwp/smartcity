@@ -16,7 +16,9 @@ export function upgradeLandscape<T extends Partial<LandscapeData>>(data: T): T {
   });
 
   const portIds = new Set(PORTS.map((p) => p.id));
-  const berths = (data.berths ?? []).map((b, i) => (portIds.has(b.portId) ? b : { ...b, portId: PORTS[i % PORTS.length].id }));
+  // Ports were renamed: Tuas Port is now Jurong Port and Queenstown Port is PSA.
+  const rename = (name: string) => name.replace(/^Tuas Berth/, 'Jurong Port Berth').replace(/^Queenstown Berth/, 'PSA Berth');
+  const berths = (data.berths ?? []).map((b, i) => ({ ...(portIds.has(b.portId) ? b : { ...b, portId: PORTS[i % PORTS.length].id }), name: rename(b.name) }));
   const ships = (data.ships ?? []).map((s, i) => (portIds.has(s.portId) ? s : { ...s, portId: PORTS[i % PORTS.length].id }));
 
   return { ...data, zones, systems, berths, ships };

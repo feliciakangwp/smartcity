@@ -12,7 +12,7 @@ export type V2 = [number, number];
 export const W = (px: number, py: number): V2 => [(px - 300) * MAP_SCALE, (py - 200) * MAP_SCALE];
 
 // ---------- Coastline (map pixels, clockwise from Tuas) ----------
-/** Straight south-coast quays: Tuas (west) and Queenstown / Pasir Panjang. */
+/** Straight south-coast quays: Jurong Port (at Tuas, west) and PSA (Queenstown / Pasir Panjang). */
 const TUAS_QUAY_PY = 268;
 const QT_QUAY_PY = 290;
 
@@ -82,7 +82,7 @@ const [qtMax] = W(308, QT_QUAY_PY);
 export const PORTS: PortSite[] = [
   {
     id: 'tuas',
-    name: 'Tuas Port',
+    name: 'Jurong Port',
     quayZ: tuasQuay,
     minX: tuasMin,
     maxX: tuasMax,
@@ -93,7 +93,7 @@ export const PORTS: PortSite[] = [
   },
   {
     id: 'queenstown',
-    name: 'Queenstown Port',
+    name: 'PSA',
     quayZ: qtQuay,
     minX: qtMin,
     maxX: qtMax,
@@ -158,6 +158,7 @@ export const ROAD_EDGES: [string, string][] = [
   ['SERANGOON', 'PUNGGOL'], ['SERANGOON', 'PAYA_LEBAR'], ['PAYA_LEBAR', 'BEDOK'], ['SERANGOON', 'TAMPINES'],
   ['CBD', 'BEDOK'], ['BEDOK', 'ECP_E'], ['ECP_E', 'CHANGI'], ['TAMPINES', 'CHANGI'],
 ];
+/** Highway between the two ports (Jurong Port at Tuas and PSA at Queenstown). */
 export const PORT_HIGHWAY = ['TUAS_GATE', 'PIONEER', 'JURONG', 'QT_GATE'];
 
 /** Where distribution trucks deliver to, with the name shown on the map. */
@@ -176,11 +177,6 @@ export const TOWNS: { node: string; name: string; weight: number }[] = [
   { node: 'CBD', name: 'CBD', weight: 2 },
   { node: 'JURONG', name: 'Jurong', weight: 1 },
   { node: 'CHANGI', name: 'Changi', weight: 1 },
-];
-export const PLACE_LABELS: { name: string; at: V2 }[] = [
-  ...TOWNS.map((t) => ({ name: t.name, at: ROAD_NODES[t.node] })),
-  { name: 'Tuas', at: W(70, 236) },
-  { name: 'Pioneer', at: W(172, 262) },
 ];
 
 /** Dijkstra over the expressway graph; returns world points from `from` to `to`. */

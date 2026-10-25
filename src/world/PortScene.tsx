@@ -2,6 +2,7 @@
 import { Suspense, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { AdaptiveDpr, OrbitControls, PerformanceMonitor, Sky } from '@react-three/drei';
+import * as THREE from 'three';
 import { useLandscape } from '@/store/landscape';
 import { useWorld, type ResolvedQuality } from '@/store/world';
 import { Ocean } from './Ocean';
@@ -32,6 +33,7 @@ export function PortScene() {
 
   return (
     <Canvas
+      className="port-canvas"
       shadows={effective !== 'low'}
       dpr={dpr}
       camera={{ position: HOME.position.toArray(), fov: 42, near: 1, far: 6000 }}
@@ -89,6 +91,10 @@ export function PortScene() {
         minDistance={18}
         maxDistance={1800}
         screenSpacePanning={false}
+        // Grab the map to move it (left drag / one finger); right drag or two fingers to rotate.
+        mouseButtons={{ LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE }}
+        touches={{ ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE }}
+        panSpeed={1.2}
       />
     </Canvas>
   );

@@ -27,3 +27,9 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
+
+/* Port World cursor: open hand to grab and move, closed hand while dragging, pointer on clickable things. */
+.port-canvas canvas { cursor: grab; }
+.port-canvas canvas:active { cursor: grabbing; }
+body[data-world-hover] .port-canvas canvas { cursor: pointer; }
+body[data-world-dragging] .port-canvas canvas { cursor: grabbing; }

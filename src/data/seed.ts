@@ -3,7 +3,7 @@
 import type { LandscapeData, ShipConfig, System, SystemModule, Zone } from '@/types/domain';
 import { DEFAULT_PLOTS } from './layout';
 
-export const SEED_VERSION = 3;
+export const SEED_VERSION = 4;
 const STAMP = '2026-10-25T09:00:00.000Z';
 const audit = { createdAt: STAMP, updatedAt: STAMP, archived: false };
 
@@ -129,10 +129,10 @@ export function createSeed(): LandscapeData {
     journeys: [],
     ships,
     berths: [
-      { id: uid('30', 1), name: 'Tuas Berth 1', portId: 'tuas', x: -385 },
-      { id: uid('30', 2), name: 'Tuas Berth 2', portId: 'tuas', x: -312 },
-      { id: uid('30', 3), name: 'Queenstown Berth 1', portId: 'queenstown', x: -92 },
-      { id: uid('30', 4), name: 'Queenstown Berth 2', portId: 'queenstown', x: -22 },
+      { id: uid('30', 1), name: 'Jurong Port Berth 1', portId: 'tuas', x: -385 },
+      { id: uid('30', 2), name: 'Jurong Port Berth 2', portId: 'tuas', x: -312 },
+      { id: uid('30', 3), name: 'PSA Berth 1', portId: 'queenstown', x: -92 },
+      { id: uid('30', 4), name: 'PSA Berth 2', portId: 'queenstown', x: -22 },
     ],
     simulation: { ambientEnabled: true, defaultSpeed: 1 },
     platform: { name: 'PORT NEXUS', tagline: 'Connecting Systems. Moving Information.', quality: 'auto', mapRings: 0 },

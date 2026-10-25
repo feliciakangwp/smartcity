@@ -4,14 +4,12 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useLandscape } from '@/store/landscape';
-import { useWorld } from '@/store/world';
 import {
-  AIRPORT, CRANE, ISLANDS, LAND_Y, MAINLAND, NAV_MARKERS, PLACE_LABELS, PORTS, PORT_HIGHWAY, ROAD_EDGES, ROAD_NODES,
+  AIRPORT, CRANE, ISLANDS, LAND_Y, MAINLAND, NAV_MARKERS, PORTS, PORT_HIGHWAY, ROAD_EDGES, ROAD_NODES,
   TERMINAL_ROAD_DZ, W, YARD_ROAD_DZ, pointInPolygon, portYard, type PortSite, type V2,
 } from '@/data/layout';
 import { C, boxGeo, cylGeo, mat } from './materials';
 import { waveHeight } from './Ocean';
-import { Label } from './Label';
 
 export function Terrain() {
   return (
@@ -25,7 +23,6 @@ export function Terrain() {
       ))}
       <Roads />
       <TownsAndTrees />
-      <PlaceNames />
       <NavMarkers />
       <Lighthouse position={[W(368, 291)[0], 0, W(368, 291)[1]]} />
     </group>
@@ -76,7 +73,6 @@ function PortGround({ port }: { port: PortSite }) {
         <mesh key={dz} position={[cx, LAND_Y + 0.08, port.quayZ + dz]} geometry={boxGeo(1, 1, 1)} scale={[w + 6, 0.06, 7]} material={mat(C.asphalt, { roughness: 0.9 })} receiveShadow />
       ))}
       <instancedMesh ref={bollards} args={[cylGeo(0.35, 0.45, 0.9, 10), mat('#2b333b'), n]} castShadow />
-      <Label position={[cx, 34, port.quayZ - 40]} text={port.name} border="#1f56a3" height={0.032} />
     </group>
   );
 }
@@ -210,18 +206,6 @@ function TownsAndTrees() {
       <instancedMesh ref={trunks} args={[cylGeo(0.22, 0.3, 2, 6), mat('#7a5a3a'), Math.max(1, trees.length)]} castShadow />
       <instancedMesh ref={crowns} args={[new THREE.IcosahedronGeometry(1.9, 1), mat('#4f9b57', { roughness: 0.9 }), Math.max(1, trees.length)]} castShadow />
     </group>
-  );
-}
-
-function PlaceNames() {
-  const show = useWorld((s) => s.showLabels);
-  if (!show) return null;
-  return (
-    <>
-      {PLACE_LABELS.map((p) => (
-        <Label key={p.name} position={[p.at[0], 14, p.at[1] - 8]} text={p.name} bg="rgba(255,255,255,0.78)" border="#a9b7c9" color="#34465e" height={0.019} maxDistance={760} />
-      ))}
-    </>
   );
 }
 

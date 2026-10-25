@@ -94,7 +94,7 @@ export function SchedulePanel() {
                 .map((b) => (
                   <Item
                     key={b.cfg.id}
-                    left={<>{b.cfg.name.replace(port.name.split(' ')[0] + ' ', '')}: {b.ship ? <b className="font-semibold">{b.ship.cfg.name}</b> : <span className="text-ink-500">free</span>}</>}
+                    left={<>{b.cfg.name.replace(port.name + ' ', '')}: {b.ship ? <b className="font-semibold">{b.ship.cfg.name}</b> : <span className="text-ink-500">free</span>}</>}
                     right={b.ship ? (b.ship.state === 'UNLOADING' ? `unloading · ${b.ship.toUnload} left` : b.ship.state === 'LOADING' ? `loading · ${b.ship.toLoad} left` : b.ship.state.toLowerCase()) : ''}
                     tone={b.ship ? 'live' : undefined}
                   />
@@ -122,7 +122,7 @@ export function SchedulePanel() {
         <Section icon={Truck} title="Trucks">
           <Item left="On the road now" right={`${onRoad.filter((t) => t.kind === 'shuttle').length} port shuttles · ${onRoad.filter((t) => t.kind === 'delivery').length} deliveries`} tone="live" />
           {logistics.upcoming.slice(0, 5).map((d, i) => (
-            <Item key={i} left={d.kind === 'shuttle' ? `Shuttle ${d.from.replace(' Port', '')} → ${d.to.replace(' Port', '')}` : `Delivery ${d.from.replace(' Port', '')} → ${d.to}`} right={`leaves ${secs(d.at - logistics.time)}`} />
+            <Item key={i} left={d.kind === 'shuttle' ? `Shuttle ${d.from} → ${d.to}` : `Delivery ${d.from} → ${d.to}`} right={`leaves ${secs(d.at - logistics.time)}`} />
           ))}
           <Item left="Delivered so far" right={logistics.delivered} />
         </Section>

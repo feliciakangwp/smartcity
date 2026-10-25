@@ -5,6 +5,7 @@ import type { ZoneLayout, SystemPlacement } from '@/lib/placement';
 import { slotGrid } from '@/lib/placement';
 import { useWorld } from '@/store/world';
 import { LAND_Y } from '@/data/layout';
+import { setHoverCursor } from './cursor';
 import { mat, tint, UNIT_BOX, type Tone } from './materials';
 import { Label } from './Label';
 import { ZoneLandmark } from './zoneThemes';
@@ -41,9 +42,9 @@ export const ZoneDistrict = memo(function ZoneDistrict({ layout, placements, dim
           }}
           onPointerOver={(e) => {
             e.stopPropagation();
-            document.body.style.cursor = 'pointer';
+            setHoverCursor(true);
           }}
-          onPointerOut={() => (document.body.style.cursor = '')}
+          onPointerOut={() => setHoverCursor(false)}
         />
         {[
           [0, d / 2, w, 0.7],

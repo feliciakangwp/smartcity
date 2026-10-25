@@ -2,6 +2,7 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { setHoverCursor } from '../cursor';
 import type { ShipSim } from '@/sim/maritime';
 import { DECK_Y, slotLocal } from '@/sim/maritime';
 import { CONTAINER } from '@/data/layout';
@@ -35,7 +36,6 @@ export function Ship({ ship }: { ship: ShipSim }) {
   const lastVersion = useRef(-1);
   const select = useWorld((s) => s.select);
   const selected = useWorld((s) => s.selection?.kind === 'ship' && s.selection.id === ship.cfg.id);
-  const showLabels = useWorld((s) => s.showLabels);
   const { length: L, beam: Bm, cfg } = ship;
 
   const geos = useMemo(() => {
@@ -93,9 +93,9 @@ export function Ship({ ship }: { ship: ShipSim }) {
       }}
       onPointerOver={(e) => {
         e.stopPropagation();
-        document.body.style.cursor = 'pointer';
+        setHoverCursor(true);
       }}
-      onPointerOut={() => (document.body.style.cursor = '')}
+      onPointerOut={() => setHoverCursor(false)}
     >
       <mesh geometry={geos.lower} rotation-x={-Math.PI / 2} position={[0, -2.2, 0]} material={mat('#8c2b2b', { roughness: 0.7 })} />
       <mesh geometry={geos.upper} rotation-x={-Math.PI / 2} position={[0, 0.2, 0]} material={hull} castShadow />
@@ -126,7 +126,7 @@ export function Ship({ ship }: { ship: ShipSim }) {
         <meshBasicMaterial color="#ffffff" transparent opacity={0} depthWrite={false} />
       </mesh>
 
-      {(showLabels || selected) && (
+      {selected && (
         <Label position={[-L / 2 + 5, 17, 0]} text={cfg.name} border={selected ? '#22c3e6' : '#1f56a3'} height={selected ? 0.03 : 0.024} maxDistance={selected ? Infinity : 420} />
       )}
     </group>

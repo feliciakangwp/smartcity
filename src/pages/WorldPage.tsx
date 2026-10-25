@@ -66,6 +66,9 @@ export default function WorldPage() {
           <div className="flex min-h-0 flex-col items-start gap-3">
             <WorldSearch />
             <WorldToolbar />
+            <p className="panel pointer-events-auto hidden px-2.5 py-1.5 text-[11px] text-ink-700 sm:block">
+              <b>Drag</b> to move · <b>Right-drag</b> to rotate · <b>Scroll</b> to zoom
+            </p>
           </div>
           <div className="flex-1" />
           <div className="flex min-h-0 items-start justify-end">

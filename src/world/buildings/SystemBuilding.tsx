@@ -7,6 +7,7 @@ import type { SystemPlacement } from '@/lib/placement';
 import { buildState, type BuildState } from '@/lib/systemAge';
 import { useWorld } from '@/store/world';
 import { LAND_Y } from '@/data/layout';
+import { setHoverCursor } from '../cursor';
 import { buildingMats, mat, tint, type BuildingMats, type Tone } from '../materials';
 import { Label } from '../Label';
 import { Archetype, archetypeHeight, B, Cyl } from './archetypes';
@@ -18,7 +19,7 @@ interface Props {
   showLabel: boolean;
 }
 
-const setCursor = (c: string) => (document.body.style.cursor = c);
+const setCursor = (c: string) => setHoverCursor(c === 'pointer');
 const BASE_Y = LAND_Y + 0.25;
 
 export const SystemBuilding = memo(function SystemBuilding({ placement, accent, tone, showLabel }: Props) {
