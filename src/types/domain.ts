@@ -62,7 +62,7 @@ export const SYSTEM_CATEGORIES = [
 ] as const;
 export type SystemCategory = (typeof SYSTEM_CATEGORIES)[number];
 
-export const SYSTEM_STATUSES = ['Planned', 'In Development', 'Live', 'Enhancement', 'Sunsetting', 'Retired'] as const;
+export const SYSTEM_STATUSES = ['Planned', 'In Development', 'Live', 'Enhancement', 'Sunsetting', 'Decommission', 'Retired'] as const;
 export type SystemStatus = (typeof SYSTEM_STATUSES)[number];
 
 export const CRITICALITIES = ['Low', 'Medium', 'High', 'Mission Critical'] as const;
@@ -77,6 +77,32 @@ export interface SystemModule {
 
 /** Systems older than this many years are drawn as legacy buildings. */
 export const LEGACY_AGE_YEARS = 5;
+
+/** A revamp of an existing system. One revamp can be ticked to count the system's age from. */
+export interface SystemRevamp {
+  id: ID;
+  year: number;
+  /** Areas where maintenance or rework was done. */
+  areas: string;
+  useForAge: boolean;
+}
+
+/** Data this system receives, and the system it comes from. */
+export interface DataInput {
+  id: ID;
+  data: string;
+  fromSystemId: ID;
+}
+
+/** Data this system sends, and the system it goes to. */
+export interface DataOutput {
+  id: ID;
+  data: string;
+  toSystemId: ID;
+}
+
+/** Earliest year offered for "System originated". */
+export const FIRST_SYSTEM_YEAR = 1970;
 
 export interface DocLink {
   label: string;
@@ -104,8 +130,17 @@ export interface System extends Audited {
   docs: DocLink[];
   /** Slot inside the zone; undefined = auto-place. */
   slot?: number;
-  /** Year the system went live (or is planned to). Drives the legacy / modern look. */
+  /** Project / product team (free text). */
+  productTeam?: string;
+  /** Year the system originated. With a ticked revamp, sets the system's age and its legacy / modern look. */
+  yearOriginated?: number;
+  /** Target go-live year, for systems still being developed. */
   yearIntroduced?: number;
+  revamps?: SystemRevamp[];
+  /** Year of decommission, when the status is Decommission. */
+  decommissionYear?: number;
+  inputs?: DataInput[];
+  outputs?: DataOutput[];
   /** Development progress 0–100 for Planned / In Development systems. */
   buildProgress?: number;
   /** Optional modules, each with its own using divisions. One building still represents the system. */

@@ -7,6 +7,7 @@ import { useWorld } from '@/store/world';
 import { STATUS_COLORS, impactOf, owningDivision, usingDivisions } from '@/lib/metrics';
 import { Button, Chip, Empty, StatusChip, ZoneSwatch } from '@/components/ui';
 import { useSummary } from './useSummary';
+import { chartInk, useTheme } from '@/lib/theme';
 
 const BLUE = '#2a78d6';
 const CRIT: Record<string, string> = { Low: '#86b6ef', Medium: '#3987e5', High: '#256abf', 'Mission Critical': '#104281' };
@@ -18,19 +19,20 @@ interface Datum {
 }
 
 function HBar({ data, color, label }: { data: Datum[]; color?: (d: Datum) => string; label: string }) {
+  const ink = chartInk(useTheme((t) => t.theme));
   if (!data.length) return <Empty>No records yet.</Empty>;
   return (
     <div role="img" aria-label={`${label}: ${data.map((d) => `${d.name} ${d.value}`).join(', ')}`}>
       <ResponsiveContainer width="100%" height={data.length * 30 + 8}>
         <BarChart data={data} layout="vertical" margin={{ top: 0, right: 34, bottom: 0, left: 0 }} barCategoryGap={6}>
           <XAxis type="number" hide allowDecimals={false} />
-          <YAxis type="category" dataKey="name" width={150} tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: '#34465e' }} />
-          <Tooltip cursor={{ fill: 'rgba(30,127,216,0.06)' }} contentStyle={{ borderRadius: 8, border: '1px solid #d5dee9', fontSize: 12 }} formatter={(v: number) => [v, label]} />
+          <YAxis type="category" dataKey="name" width={150} tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: ink.text }} />
+          <Tooltip cursor={{ fill: 'rgba(30,127,216,0.06)' }} contentStyle={{ borderRadius: 8, border: `1px solid ${ink.border}`, background: ink.bg, color: ink.strong, fontSize: 12 }} formatter={(v: number) => [v, label]} />
           <Bar dataKey="value" barSize={14} radius={[0, 4, 4, 0]} isAnimationActive={false}>
             {data.map((d) => (
               <Cell key={d.name} fill={color ? color(d) : BLUE} />
             ))}
-            <LabelList dataKey="value" position="right" style={{ fontSize: 12, fill: '#0f1c2e', fontWeight: 600 }} />
+            <LabelList dataKey="value" position="right" style={{ fontSize: 12, fill: ink.strong, fontWeight: 600 }} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -42,7 +44,7 @@ function Section({ title, note, children }: { title: string; note?: string; chil
   return (
     <section className="flex min-w-0 flex-col gap-4">
       <div>
-        <h2 className="text-lg font-bold text-navy-900">{title}</h2>
+        <h2 className="text-lg font-bold text-heading">{title}</h2>
         {note && <p className="mt-0.5 text-xs text-ink-500">{note}</p>}
       </div>
       {children}
@@ -52,7 +54,7 @@ function Section({ title, note, children }: { title: string; note?: string; chil
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="min-w-0 rounded-[10px] border border-ink-200 bg-white p-4">
+    <div className="min-w-0 rounded-[10px] border border-ink-200 bg-surface p-4">
       <h3 className="mb-3 text-sm font-semibold text-ink-900">{title}</h3>
       {children}
     </div>
@@ -98,11 +100,11 @@ export function DashboardContent({ onHighlight, onFocusSystem }: { onHighlight?:
             <dl className="grid grid-cols-2 gap-3">
               <div>
                 <dt className="text-xs text-ink-500">Integrations</dt>
-                <dd className="num font-display text-3xl font-bold text-navy-900">{s.totals.integrations}</dd>
+                <dd className="num font-display text-3xl font-bold text-heading">{s.totals.integrations}</dd>
               </div>
               <div>
                 <dt className="text-xs text-ink-500">Cross-division</dt>
-                <dd className="num font-display text-3xl font-bold text-navy-900">{s.totals.crossDivision}</dd>
+                <dd className="num font-display text-3xl font-bold text-heading">{s.totals.crossDivision}</dd>
               </div>
             </dl>
             <p className="mt-3 text-xs text-ink-500">Cross-division integrations connect systems in different zones.</p>
@@ -140,7 +142,7 @@ export function DashboardContent({ onHighlight, onFocusSystem }: { onHighlight?:
       </Section>
 
       <Section title="Data journey overview" note="Demonstration journeys use placeholder systems. Animated playback arrives in Phase 3.">
-        <div className="overflow-x-auto rounded-[10px] border border-ink-200 bg-white">
+        <div className="overflow-x-auto rounded-[10px] border border-ink-200 bg-surface">
           <table className="w-full min-w-[640px] text-sm">
             <thead className="table-head">
               <tr>
@@ -278,9 +280,9 @@ function SharedSection({ onFocusSystem }: { onFocusSystem?: (id: string) => void
     <Section title="Cross-division systems" note="Ownership and usage come from the system register. A division using a system is not counted as an integration.">
       <div className="grid gap-3 sm:grid-cols-3">
         {tiles.map((t) => (
-          <div key={t.label} className="rounded-[10px] border border-ink-200 bg-white px-4 py-3">
+          <div key={t.label} className="rounded-[10px] border border-ink-200 bg-surface px-4 py-3">
             <div className="text-xs text-ink-500">{t.label}</div>
-            <div className="num font-display text-3xl font-bold text-navy-900">{t.value}</div>
+            <div className="num font-display text-3xl font-bold text-heading">{t.value}</div>
             <div className="mt-0.5 text-[11px] text-ink-500">{t.note}</div>
           </div>
         ))}
@@ -294,7 +296,7 @@ function SharedSection({ onFocusSystem }: { onFocusSystem?: (id: string) => void
           <HBar data={s.crossUsageByDivision} color={(d) => d.color ?? BLUE} label="Systems used" />
         </Card>
       </div>
-      <div className="overflow-x-auto rounded-[10px] border border-ink-200 bg-white">
+      <div className="overflow-x-auto rounded-[10px] border border-ink-200 bg-surface">
         {rows.length === 0 ? (
           <div className="p-4"><Empty>No shared systems yet. Select two or more using divisions on a system to make it shared.</Empty></div>
         ) : (
@@ -319,7 +321,7 @@ function SharedSection({ onFocusSystem }: { onFocusSystem?: (id: string) => void
                         type="button"
                         onClick={() => onFocusSystem?.(sys.id)}
                         disabled={!onFocusSystem}
-                        className="text-left font-semibold text-navy-800 hover:underline disabled:no-underline"
+                        className="text-left font-semibold text-heading hover:underline disabled:no-underline"
                         title="Show this building in the Port World"
                       >
                         <span className="mr-1.5 font-mono text-xs text-harbor-500">{sys.acronym}</span>

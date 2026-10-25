@@ -8,8 +8,7 @@ import { activeIntegrations, activeSystems, integrationsFor, isShared, owningDiv
 import { DATA_TYPE_COLORS, type Integration } from '@/types/domain';
 import { SHIP_STATES } from '@/sim/maritime';
 import { currentSim } from '@/world/maritime/SimContext';
-import { buildState } from '@/lib/systemAge';
-import { LEGACY_AGE_YEARS } from '@/types/domain';
+import { BuildSummary, DataFlowList } from '@/components/systems/SystemFacts';
 import { Button, Chip, StatusChip, ZoneSwatch, cx } from '@/components/ui';
 
 export function InfoPanel() {
@@ -45,7 +44,7 @@ function ZoneDetails({ id }: { id: string }) {
         <div className="eyebrow flex items-center gap-2">
           <ZoneSwatch color={zone.color} /> Zone
         </div>
-        <h2 className="mt-1 text-xl font-bold text-navy-900">{zone.name}</h2>
+        <h2 className="mt-1 text-xl font-bold text-heading">{zone.name}</h2>
         <p className="mt-1 text-sm text-ink-700">{zone.description}</p>
         {zone.kind === 'shared' && <p className="mt-2"><Chip color={zone.color}>Shared services zone · not a division</Chip></p>}
       </div>
@@ -67,7 +66,7 @@ function ZoneDetails({ id }: { id: string }) {
                   onClick={() => select({ kind: 'system', id: s.id }, true)}
                   className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-harbor-50"
                 >
-                  <span className="min-w-[2.75rem] shrink-0 font-mono text-xs font-semibold text-navy-700">{s.acronym}</span>
+                  <span className="min-w-[2.75rem] shrink-0 font-mono text-xs font-semibold text-heading-soft">{s.acronym}</span>
                   <span className="min-w-0 flex-1 truncate">{s.name}</span>
                   <StatusChip status={s.status} />
                 </button>
@@ -84,7 +83,7 @@ function ZoneDetails({ id }: { id: string }) {
             {usesElsewhere.map((s) => (
               <li key={s.id}>
                 <button type="button" onClick={() => select({ kind: 'system', id: s.id }, true)} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-harbor-50">
-                  <span className="min-w-[2.75rem] shrink-0 font-mono text-xs font-semibold text-navy-700">{s.acronym}</span>
+                  <span className="min-w-[2.75rem] shrink-0 font-mono text-xs font-semibold text-heading-soft">{s.acronym}</span>
                   <span className="min-w-0 flex-1 truncate">{s.name}</span>
                   {isShared(s, zones) && <Chip color="#0d9488">Shared</Chip>}
                 </button>
@@ -168,7 +167,7 @@ function SystemDetails({ id }: { id: string }) {
         <div className="eyebrow flex items-center gap-2">
           <ZoneSwatch color={zone?.color ?? '#999'} /> {zone?.name}
         </div>
-        <h2 className="mt-1 text-xl font-bold text-navy-900">
+        <h2 className="mt-1 text-xl font-bold text-heading">
           <span className="font-mono text-base text-harbor-500">{system.acronym}</span> {system.name}
         </h2>
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -222,7 +221,9 @@ function SystemDetails({ id }: { id: string }) {
         </dl>
         <p className="text-xs text-ink-500">Division usage is shown with flowing dashed lines. It is not an integration.</p>
       </section>
+      <DataFlowList system={system} systems={live} onSelect={(sid) => select({ kind: 'system', id: sid }, true)} />
       <dl className="grid grid-cols-[96px_1fr] gap-x-3 gap-y-1.5 text-sm">
+        {system.productTeam && <Row label="Product team">{system.productTeam}</Row>}
         {system.owner && <Row label="Owner">{system.owner}</Row>}
         {system.techStack && <Row label="Technology">{system.techStack}</Row>}
         {system.endpoints && <Row label="Endpoints"><span className="whitespace-pre-line font-mono text-xs">{system.endpoints}</span></Row>}
@@ -280,8 +281,8 @@ function SystemDetails({ id }: { id: string }) {
         <h3 className="mb-1 text-sm font-semibold">Outgoing integrations ({outgoing.length})</h3>
         {outgoing.length ? <ul>{outgoing.map((i) => flow(i, 'out'))}</ul> : <p className="text-sm text-ink-500">None recorded.</p>}
       </div>
-      <Link to={`/admin/systems?edit=${system.id}`} className="inline-flex items-center gap-1.5 text-sm font-semibold text-harbor-500 hover:underline">
-        <Pencil className="h-3.5 w-3.5" /> Edit in System Registry
+      <Link to={`/systems?system=${system.id}`} className="inline-flex items-center gap-1.5 text-sm font-semibold text-harbor-500 hover:underline">
+        <Pencil className="h-3.5 w-3.5" /> Edit system
       </Link>
     </div>
   );
@@ -317,7 +318,7 @@ function ShipDetails({ id }: { id: string }) {
         <div className="eyebrow flex items-center gap-2">
           <ShipIcon className="h-3.5 w-3.5" /> Vessel · simulated
         </div>
-        <h2 className="mt-1 text-xl font-bold text-navy-900">{cfg.name}</h2>
+        <h2 className="mt-1 text-xl font-bold text-heading">{cfg.name}</h2>
         <p className="mt-1 text-xs text-ink-500">Ambient port activity for presentation. Not linked to real vessel data.</p>
       </div>
       <ol className="grid grid-cols-2 gap-1" aria-label="Voyage state">
@@ -326,7 +327,7 @@ function ShipDetails({ id }: { id: string }) {
             key={st}
             className={cx(
               'rounded-md border px-2 py-1 text-xs font-semibold',
-              ship.state === st ? 'border-nexus-400 bg-nexus-100 text-navy-900' : 'border-ink-200 text-ink-500',
+              ship.state === st ? 'border-nexus-400 bg-nexus-100 text-heading' : 'border-ink-200 text-ink-500',
             )}
             aria-current={ship.state === st ? 'step' : undefined}
           >
@@ -362,29 +363,4 @@ function craneText(phase: string) {
       hoistDrop: 'Raising spreader',
     } as Record<string, string>
   )[phase] ?? phase;
-}
-
-function BuildSummary({ system }: { system: Parameters<typeof buildState>[0] }) {
-  const b = buildState(system);
-  if (b.developing)
-    return (
-      <div className="flex flex-col gap-1.5" aria-label="Build progress">
-        <div className="flex justify-between text-sm">
-          <span className="font-semibold">{b.progress === 0 ? 'Not started' : 'Under development'}</span>
-          <span className="num text-ink-700">
-            {b.progress}% developed{system.yearIntroduced ? ` · target ${system.yearIntroduced}` : ''}
-          </span>
-        </div>
-        <div className="h-2 overflow-hidden rounded-full bg-ink-100" role="progressbar" aria-valuenow={b.progress} aria-valuemin={0} aria-valuemax={100}>
-          <div className="h-full rounded-full bg-harbor-500" style={{ width: `${b.progress}%` }} />
-        </div>
-      </div>
-    );
-  if (!system.yearIntroduced) return null;
-  return (
-    <p className="text-sm text-ink-700">
-      Live since <b>{system.yearIntroduced}</b> · <span className="num">{b.age}</span> year{b.age === 1 ? '' : 's'}{' '}
-      {b.legacy ? <Chip color="#9a6b4f">Old infrastructure (over {LEGACY_AGE_YEARS} years) · fully built</Chip> : <Chip color="#22c3e6">New · fully built</Chip>}
-    </p>
-  );
 }

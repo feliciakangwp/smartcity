@@ -1,6 +1,10 @@
 // Live timetable for the simulated port: flights, vessels and trucks.
 import { useEffect, useState, type ReactNode } from 'react';
-import { CalendarClock, Plane, Ship, Truck, X } from 'lucide-react';
+import { AlertTriangle, CalendarClock, FileText, Plane, Ship, Truck, X } from 'lucide-react';
+import { useLandscape } from '@/store/landscape';
+import { activeSystems } from '@/lib/metrics';
+import { dataFlowPairs } from '@/lib/dataFlows';
+import { brokenVanSpot, useDataVans } from '@/world/DataVans';
 import { currentSims } from '@/world/maritime/SimContext';
 import type { ShipSim } from '@/sim/maritime';
 import { useWorld } from '@/store/world';
@@ -70,6 +74,7 @@ export function SchedulePanel() {
         </button>
       </div>
       <div className="flex flex-col gap-4 overflow-y-auto px-4 py-3">
+        <DataDeliveries />
         <Section icon={Plane} title="Changi arrivals">
           {airport.upcoming.map((a) => (
             <Item key={a.flight} left={<b className="font-semibold">{a.flight}</b>} right={`lands ${secs(a.at - airport.time)}`} />
@@ -128,5 +133,55 @@ export function SchedulePanel() {
         </Section>
       </div>
     </aside>
+  );
+}
+
+/** One delivery van per matched sender → receiver pair; broken links are listed in red. */
+function DataDeliveries() {
+  const systems = useLandscape((s) => s.systems);
+  const zones = useLandscape((s) => s.zones);
+  const select = useWorld((s) => s.select);
+  const focusOn = useWorld((s) => s.focusOn);
+  const vans = useDataVans();
+  const live = activeSystems(systems, zones);
+  const pairs = dataFlowPairs(live);
+  if (!pairs.length) return null;
+  const name = (id: string) => live.find((s) => s.id === id)?.acronym ?? '?';
+  const sorted = [...pairs].sort((a, b) => Number(a.status === 'ok') - Number(b.status === 'ok'));
+  return (
+    <Section icon={FileText} title="Data deliveries">
+      {sorted.map((p) => {
+        const ok = p.status === 'ok';
+        const fix = p.status === 'missing-output' ? p.fromId : p.toId;
+        return (
+          <li key={`${p.fromId}>${p.toId}`}>
+            <button
+              type="button"
+              onClick={() => {
+                // A broken link frames its broken-down van and selects the system that needs fixing.
+                const van = !ok && vans.find((v) => v.pair.fromId === p.fromId && v.pair.toId === p.toId);
+                if (!van) return select({ kind: 'system', id: ok ? p.toId : fix }, true);
+                select({ kind: 'system', id: fix });
+                const at = brokenVanSpot(van);
+                focusOn('place', `${at.x.toFixed(1)},${at.z.toFixed(1)},near`);
+              }}
+              className="flex w-full items-baseline justify-between gap-3 rounded text-left hover:bg-harbor-50"
+              title={ok ? (p.inputs.length ? p.inputs : p.outputs).join(', ') : `Broken link: ${name(fix)} needs to list this flow`}
+            >
+              <span className="min-w-0 truncate">
+                {name(p.fromId)} → {name(p.toId)}
+              </span>
+              {ok ? (
+                <span className="shrink-0 text-xs font-semibold text-emerald-700">Van delivering</span>
+              ) : (
+                <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-red-700">
+                  <AlertTriangle className="h-3 w-3" aria-hidden /> Broken link
+                </span>
+              )}
+            </button>
+          </li>
+        );
+      })}
+    </Section>
   );
 }

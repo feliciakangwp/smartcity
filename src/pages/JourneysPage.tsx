@@ -25,7 +25,7 @@ export default function JourneysPage() {
   const SysTag = ({ id }: { id: string }) => {
     const s = sysById.get(id);
     return (
-      <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-semibold ${id === systemFilter ? 'border-nexus-400 bg-nexus-100' : 'border-ink-200 bg-white'}`}>
+      <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-semibold ${id === systemFilter ? 'border-nexus-400 bg-nexus-100' : 'border-ink-200 bg-surface'}`}>
         <ZoneSwatch color={zoneColor(id)} className="h-2.5 w-2.5" />
         {s?.acronym ?? '?'}
       </span>
@@ -53,7 +53,7 @@ export default function JourneysPage() {
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         <div className="eyebrow">Data journey explorer</div>
-        <h1 className="mt-1 text-3xl font-bold text-navy-900">How information moves between systems</h1>
+        <h1 className="mt-1 text-3xl font-bold text-heading">How information moves between systems</h1>
         <p className="mt-1 max-w-[65ch] text-sm text-ink-700">
           Each journey is an ordered set of integrations, with conditional branches where the outcome depends on the data. These are illustrative journeys built on placeholder systems.
         </p>
@@ -67,12 +67,12 @@ export default function JourneysPage() {
         <div className="mt-6 flex flex-col gap-4">
           {shown.length === 0 && <Empty>No journeys include this system yet.</Empty>}
           {shown.map((j) => (
-            <article key={j.id} className="rounded-[10px] border border-ink-200 bg-white p-5">
+            <article key={j.id} className="rounded-[10px] border border-ink-200 bg-surface p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="grid h-7 w-7 place-items-center rounded-md bg-navy-800 font-mono text-sm font-semibold text-white">{j.code}</span>
-                    <h2 className="text-lg font-bold text-navy-900">{j.name}</h2>
+                    <h2 className="text-lg font-bold text-heading">{j.name}</h2>
                     {j.published ? <Chip color="#1f9d55">Published</Chip> : <Chip>Draft</Chip>}
                   </div>
                   <p className="mt-1.5 max-w-[70ch] text-sm text-ink-700">{j.description}</p>
@@ -90,7 +90,7 @@ export default function JourneysPage() {
                     const branches = j.branches.filter((b) => b.afterStepId === step.id);
                     return (
                       <li key={step.id} className="relative">
-                        <span className="absolute -left-[31px] top-0 grid h-5 w-5 place-items-center rounded-full border-2 border-ink-200 bg-white font-mono text-[10px] font-semibold text-ink-700">{n + 1}</span>
+                        <span className="absolute -left-[31px] top-0 grid h-5 w-5 place-items-center rounded-full border-2 border-ink-200 bg-surface font-mono text-[10px] font-semibold text-ink-700">{n + 1}</span>
                         <div className="text-sm font-semibold">{step.label}</div>
                         {i ? <div className="mt-1"><Hop i={i} /></div> : <div className="text-xs text-red-700">Integration missing from the register.</div>}
                         {branches.length > 0 && (

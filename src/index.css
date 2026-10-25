@@ -3,6 +3,37 @@
 @tailwind utilities;
 
 @layer base {
+  /* Colour channels (r g b) for the light and dark themes; see tailwind.config.js. */
+  :root {
+    color-scheme: light;
+    --surface: 255 255 255;
+    --heading: 10 31 64;
+    --heading-soft: 23 66 127;
+    --ink-900: 15 28 46;
+    --ink-700: 52 70 94;
+    --ink-500: 98 116 140;
+    --ink-300: 169 183 201;
+    --ink-200: 213 222 233;
+    --ink-100: 234 240 246;
+    --harbor-100: 227 241 253;
+    --harbor-50: 243 248 254;
+    --nexus-100: 217 246 252;
+  }
+  :root.dark {
+    color-scheme: dark;
+    --surface: 18 30 49;
+    --heading: 236 243 251;
+    --heading-soft: 147 197 253;
+    --ink-900: 228 235 244;
+    --ink-700: 184 198 216;
+    --ink-500: 138 155 178;
+    --ink-300: 96 112 135;
+    --ink-200: 44 60 84;
+    --ink-100: 30 44 66;
+    --harbor-100: 24 48 84;
+    --harbor-50: 10 20 36;
+    --nexus-100: 14 58 72;
+  }
   html, body, #root { height: 100%; }
   body {
     @apply bg-harbor-50 text-ink-900 font-sans antialiased;
@@ -13,14 +44,16 @@
 }
 
 @layer components {
-  .panel { @apply bg-white/95 backdrop-blur border border-ink-200 shadow-panel rounded-[10px]; }
+  .panel { @apply bg-surface/95 backdrop-blur border border-ink-200 shadow-panel rounded-[10px]; }
   .eyebrow { @apply font-mono text-[11px] uppercase tracking-[0.12em] text-ink-500; }
   .num { font-variant-numeric: tabular-nums; }
   .input {
-    @apply w-full min-w-0 rounded-md border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 placeholder:text-ink-300
+    @apply w-full min-w-0 rounded-md border border-ink-200 bg-surface px-3 py-2 text-sm text-ink-900 placeholder:text-ink-300
       focus:border-harbor-400 focus:outline-none focus:ring-2 focus:ring-harbor-300/50;
   }
   .label { @apply text-xs font-semibold text-ink-700; }
+  /* Content pages use about 80% of the screen width on large screens. */
+  .page-wide { @apply mx-auto w-full px-4 sm:px-6 lg:w-[80%] lg:px-0; }
   .table-head { @apply bg-ink-100/70 text-left font-mono text-[11px] uppercase tracking-wider text-ink-500; }
 }
 
@@ -33,3 +66,13 @@
 .port-canvas canvas:active { cursor: grabbing; }
 body[data-world-hover] .port-canvas canvas { cursor: pointer; }
 body[data-world-dragging] .port-canvas canvas { cursor: grabbing; }
+
+/* Status tints keep their meaning in the dark theme. */
+.dark .bg-red-50 { background-color: rgb(127 29 29 / 0.28); }
+.dark .hover\:bg-red-50:hover { background-color: rgb(127 29 29 / 0.35); }
+.dark .border-red-200 { border-color: rgb(185 28 28 / 0.55); }
+.dark .text-red-700, .dark .text-red-800, .dark .hover\:text-red-700:hover { color: rgb(252 165 165); }
+.dark .bg-amber-50 { background-color: rgb(120 53 15 / 0.3); }
+.dark .border-amber-200 { border-color: rgb(180 83 9 / 0.55); }
+.dark .text-amber-900, .dark .text-amber-700 { color: rgb(252 211 77); }
+.dark .text-emerald-700 { color: rgb(110 231 183); }

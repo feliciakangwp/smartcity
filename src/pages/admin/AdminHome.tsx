@@ -21,10 +21,10 @@ export default function AdminHome() {
       </PageHead>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (
-          <Link key={c.to} to={c.to} className="flex flex-col gap-1 rounded-[10px] border border-ink-200 bg-white p-4 transition-colors hover:border-harbor-400">
+          <Link key={c.to} to={c.to} className="flex flex-col gap-1 rounded-[10px] border border-ink-200 bg-surface p-4 transition-colors hover:border-harbor-400">
             <div className="flex items-baseline justify-between">
-              <h2 className="text-base font-bold text-navy-900">{c.title}</h2>
-              {c.value !== null && <span className="num font-display text-2xl font-bold text-navy-800">{c.value}</span>}
+              <h2 className="text-base font-bold text-heading">{c.title}</h2>
+              {c.value !== null && <span className="num font-display text-2xl font-bold text-heading">{c.value}</span>}
             </div>
             <p className="text-sm text-ink-700">{c.text}</p>
             <span className="mt-1 text-xs font-semibold text-ink-500">{c.state}</span>

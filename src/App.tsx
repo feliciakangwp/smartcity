@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, Navigate, RouterProvider, useLocation } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { Toaster } from '@/components/ui/Toast';
 import { useLandscape } from '@/store/landscape';
@@ -24,12 +24,20 @@ function Loading() {
 
 const page = (el: JSX.Element) => <Suspense fallback={<Loading />}>{el}</Suspense>;
 
+/** Port Nexus Overview is the landing page. Older Port World deep links (/?focus=…) still open the world. */
+function Home() {
+  const { search } = useLocation();
+  if (new URLSearchParams(search).has('focus')) return <Navigate to={`/world${search}`} replace />;
+  return page(<DashboardPage />);
+}
+
 const router = createBrowserRouter([
   {
     element: <AppShell />,
     children: [
-      { path: '/', element: page(<WorldPage />) },
-      { path: '/dashboard', element: page(<DashboardPage />) },
+      { path: '/', element: <Home /> },
+      { path: '/world', element: page(<WorldPage />) },
+      { path: '/dashboard', element: <Navigate to="/" replace /> },
       { path: '/systems', element: page(<SystemsPage />) },
       { path: '/journeys', element: page(<JourneysPage />) },
       {

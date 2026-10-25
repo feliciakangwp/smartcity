@@ -21,7 +21,7 @@ class SceneBoundary extends Component<{ children: ReactNode }, { error: boolean 
       return (
         <div className="grid h-full place-items-center bg-harbor-100 p-6 text-center">
           <div className="max-w-md">
-            <h2 className="text-lg font-bold text-navy-900">The 3D port could not start</h2>
+            <h2 className="text-lg font-bold text-heading">The 3D port could not start</h2>
             <p className="mt-2 text-sm text-ink-700">This browser or device did not provide WebGL. Try a current version of Chrome, Edge, Firefox or Safari with hardware acceleration turned on. The Dashboard, Systems and Studio pages still work.</p>
           </div>
         </div>
@@ -42,7 +42,7 @@ export default function WorldPage() {
   const expanded = useWorld((s) => s.dashboardExpanded);
   const setExpanded = useWorld((s) => s.setDashboardExpanded);
 
-  // Deep links such as /?focus=system:<id> from the System Directory. The camera
+  // Deep links such as /world?focus=system:<id> from the Systems page. The camera
   // rig picks up the pending focus request when the scene mounts.
   useEffect(() => {
     const f = params.get('focus');
@@ -79,7 +79,7 @@ export default function WorldPage() {
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <div className="eyebrow">Executive dashboard</div>
-                  <h2 className="text-xl font-bold text-navy-900">ICT landscape at a glance</h2>
+                  <h2 className="text-xl font-bold text-heading">ICT landscape at a glance</h2>
                 </div>
                 <button type="button" onClick={() => setExpanded(false)} aria-label="Collapse dashboard" className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100">
                   <X className="h-5 w-5" />

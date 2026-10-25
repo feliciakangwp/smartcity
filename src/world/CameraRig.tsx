@@ -47,10 +47,10 @@ export function CameraRig() {
         goal.current = { target: t, position: t.clone().add(new THREE.Vector3(26, 34, 48)) };
       }
     } else if (kind === 'place' && id) {
-      // Places (ports, airport) are addressed as "x,z".
-      const [x, z] = id.split(',').map(Number);
-      const t = new THREE.Vector3(x, LAND_Y, z);
-      goal.current = { target: t, position: t.clone().add(new THREE.Vector3(60, 95, 120)) };
+      // Places (ports, airport) are addressed as "x,z"; "x,z,near" frames something small, like a van.
+      const [xs, zs, near] = id.split(',');
+      const t = new THREE.Vector3(Number(xs), LAND_Y, Number(zs));
+      goal.current = { target: t, position: t.clone().add(near === 'near' ? new THREE.Vector3(16, 24, 34) : new THREE.Vector3(60, 95, 120)) };
     } else if (kind === 'ship' && id) {
       goal.current = { target: new THREE.Vector3(), position: new THREE.Vector3(), followShip: id };
     }

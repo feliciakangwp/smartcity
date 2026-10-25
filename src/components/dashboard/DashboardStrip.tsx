@@ -23,7 +23,7 @@ export function DashboardStrip() {
       {kpis.map((k) => (
         <div key={k.label} className="flex shrink-0 flex-col justify-center border-r border-ink-200 px-4 py-2">
           <span className="text-[11px] font-medium text-ink-500">{k.label}</span>
-          <span className="num font-display text-xl font-bold leading-tight text-navy-900">{k.value}</span>
+          <span className="num font-display text-xl font-bold leading-tight text-heading">{k.value}</span>
         </div>
       ))}
       <div className="flex min-w-[220px] flex-1 flex-col justify-center gap-1.5 px-4 py-2">
@@ -50,7 +50,7 @@ export function DashboardStrip() {
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="flex shrink-0 items-center gap-1 border-l border-ink-200 px-4 text-sm font-semibold text-navy-700 hover:bg-harbor-50"
+        className="flex shrink-0 items-center gap-1 border-l border-ink-200 px-4 text-sm font-semibold text-heading-soft hover:bg-harbor-50"
         aria-expanded={expanded}
       >
         {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}

@@ -1,9 +1,9 @@
 // Demo Mode seed: the agency's systems placed on a stylised Singapore.
 // Go-live years and eCustoms module names/usage are placeholders to confirm.
-import type { LandscapeData, ShipConfig, System, SystemModule, Zone } from '@/types/domain';
+import type { DataInput, DataOutput, LandscapeData, ShipConfig, System, SystemModule, Zone } from '@/types/domain';
 import { DEFAULT_PLOTS } from './layout';
 
-export const SEED_VERSION = 5;
+export const SEED_VERSION = 6;
 const STAMP = '2026-10-25T09:00:00.000Z';
 const audit = { createdAt: STAMP, updatedAt: STAMP, archived: false };
 
@@ -33,7 +33,7 @@ const zones: Zone[] = [
   sharedHubZone(),
 ];
 
-const YEAR_NOTE = 'Go-live year is a placeholder until confirmed.';
+const YEAR_NOTE = 'Year originated is a placeholder until confirmed.';
 type SysSeed = {
   n: number;
   zone: number;
@@ -82,7 +82,8 @@ const systems: System[] = [
     category: s.category,
     status: s.status,
     criticality: s.criticality,
-    yearIntroduced: s.year,
+    // Built systems record the year they originated; systems in development keep a target go-live year.
+    ...(s.progress === undefined ? { yearOriginated: s.year } : { yearIntroduced: s.year }),
     buildProgress: s.progress,
     docs: [],
     ...audit,
@@ -99,12 +100,41 @@ const systems: System[] = [
     category: 'Core Processing',
     status: 'Live',
     criticality: 'Mission Critical',
-    yearIntroduced: 2017,
+    yearOriginated: 2017,
     modules: ECUSTOMS_MODULES(),
     docs: [],
     ...audit,
   },
 ];
+
+/**
+ * Example input / output data so the tally and the delivery vans can be seen. Each flow is
+ * listed on both systems except C2iS's input from TradeNet 4.1, which shows a broken link.
+ * Replace with the real flows.
+ */
+type FlowSeed = { n: number; from: number; to: number; data: string; listedBySender: boolean };
+const FLOW_SEEDS: FlowSeed[] = [
+  { n: 1, from: 1, to: 2, data: 'Trader applications (example)', listedBySender: true },
+  { n: 2, from: 2, to: 5, data: 'Permit fees (example)', listedBySender: true },
+  { n: 3, from: 8, to: 5, data: 'GST payments (example)', listedBySender: true },
+  { n: 4, from: 2, to: 9, data: 'Declarations for investigation (example)', listedBySender: false },
+];
+
+export function seedDataFlows(): { inputs: Record<string, DataInput[]>; outputs: Record<string, DataOutput[]> } {
+  const inputs: Record<string, DataInput[]> = {};
+  const outputs: Record<string, DataOutput[]> = {};
+  for (const f of FLOW_SEEDS) {
+    (inputs[S(f.to)] ??= []).push({ id: uid('f1', f.n), data: f.data, fromSystemId: S(f.from) });
+    if (f.listedBySender) (outputs[S(f.from)] ??= []).push({ id: uid('f2', f.n), data: f.data, toSystemId: S(f.to) });
+  }
+  return { inputs, outputs };
+}
+
+const FLOWS = seedDataFlows();
+for (const s of systems) {
+  if (FLOWS.inputs[s.id]) s.inputs = FLOWS.inputs[s.id];
+  if (FLOWS.outputs[s.id]) s.outputs = FLOWS.outputs[s.id];
+}
 
 const ship = (n: number, name: string, portId: string, hullColor: string, bays: number, rows: number, tiers: number, unloadCount: number, loadCount: number, seaTime: number): ShipConfig => ({
   id: uid('20', n), name, portId, hullColor, bays, rows, tiers, unloadCount, loadCount, seaTime,

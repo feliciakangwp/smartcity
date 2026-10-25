@@ -1,13 +1,14 @@
 // Top navigation shared by every page, with the data-mode badge.
 import { NavLink, Outlet } from 'react-router-dom';
-import { Anchor, Database, LayoutDashboard, Route, Settings2, Ship } from 'lucide-react';
+import { Anchor, Database, LayoutDashboard, Moon, Route, Settings2, Ship, Sun } from 'lucide-react';
+import { useTheme } from '@/lib/theme';
 import { useLandscape } from '@/store/landscape';
 import { dataMode, supabaseConfigured } from '@/lib/datasource';
 import { cx } from '@/components/ui';
 
 const NAV = [
-  { to: '/', label: 'Port World', icon: Ship, end: true },
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/', label: 'Port Nexus Overview', icon: LayoutDashboard, end: true },
+  { to: '/world', label: 'Port World', icon: Ship },
   { to: '/systems', label: 'Systems', icon: Database },
   { to: '/journeys', label: 'Journeys', icon: Route },
   { to: '/admin', label: 'Studio', icon: Settings2 },
@@ -46,11 +47,31 @@ export function AppShell() {
           ))}
         </nav>
         <DataModeBadge />
+        <ThemeToggle />
       </header>
       <main className="relative min-h-0 flex-1">
         <Outlet />
       </main>
     </div>
+  );
+}
+
+function ThemeToggle() {
+  const { theme, toggle } = useTheme();
+  const dark = theme === 'dark';
+  return (
+    <button
+      type="button"
+      id="theme-toggle"
+      onClick={toggle}
+      aria-pressed={dark}
+      aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+      className="flex shrink-0 items-center gap-1.5 rounded-md border border-white/15 px-2.5 py-1.5 text-xs font-semibold text-harbor-300 transition-colors hover:bg-white/10 hover:text-white"
+    >
+      {dark ? <Sun className="h-4 w-4" aria-hidden /> : <Moon className="h-4 w-4" aria-hidden />}
+      <span className="hidden lg:inline">{dark ? 'Light mode' : 'Dark mode'}</span>
+    </button>
   );
 }
 

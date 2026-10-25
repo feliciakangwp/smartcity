@@ -25,7 +25,7 @@ export function AdminIntegrations() {
         {integrations.length} integrations. Turn on integration lines in the Port World to see them as arcs between buildings.
       </PageHead>
       <PhaseNote phase={3}>Adding and editing integrations, and the animated data containers that travel along them, arrive with the integration engine.</PhaseNote>
-      <div className="overflow-x-auto rounded-[10px] border border-ink-200 bg-white">
+      <div className="overflow-x-auto rounded-[10px] border border-ink-200 bg-surface">
         <table className="w-full min-w-[900px] text-sm">
           <thead className="table-head">
             <tr>
@@ -74,10 +74,10 @@ export function AdminJourneys() {
       <PhaseNote phase={3}>The visual builder (ordered steps, conditional branches, speed, preview and publish) arrives with journey playback.</PhaseNote>
       <div className="grid gap-3 md:grid-cols-2">
         {journeys.map((j) => (
-          <div key={j.id} className="rounded-[10px] border border-ink-200 bg-white p-4">
+          <div key={j.id} className="rounded-[10px] border border-ink-200 bg-surface p-4">
             <div className="flex items-center gap-2">
               <span className="grid h-6 w-6 place-items-center rounded bg-navy-800 font-mono text-xs font-semibold text-white">{j.code}</span>
-              <h2 className="font-bold text-navy-900">{j.name}</h2>
+              <h2 className="font-bold text-heading">{j.name}</h2>
               {j.published ? <Chip color="#1f9d55">Published</Chip> : <Chip>Draft</Chip>}
             </div>
             <p className="mt-2 text-sm text-ink-700">{j.description}</p>
@@ -105,7 +105,7 @@ export function AdminMaritime() {
         Start the Port World with ambient shipping running
       </label>
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <div className="overflow-x-auto rounded-[10px] border border-ink-200 bg-white">
+        <div className="overflow-x-auto rounded-[10px] border border-ink-200 bg-surface">
           <table className="w-full min-w-[560px] text-sm">
             <thead className="table-head">
               <tr>
@@ -131,7 +131,7 @@ export function AdminMaritime() {
             </tbody>
           </table>
         </div>
-        <div className="rounded-[10px] border border-ink-200 bg-white p-4">
+        <div className="rounded-[10px] border border-ink-200 bg-surface p-4">
           <h2 className="mb-2 text-sm font-semibold">Berths</h2>
           <ul className="flex flex-col gap-1 text-sm">
             {berths.map((b) => (

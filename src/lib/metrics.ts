@@ -2,6 +2,7 @@
 import type { Integration, Journey, System, Zone } from '@/types/domain';
 import { CRITICALITIES, MECHANISMS, SYSTEM_CATEGORIES, SYSTEM_STATUSES } from '@/types/domain';
 import { buildState } from './systemAge';
+import { brokenLinks, dataFlowPairs } from './dataFlows';
 
 export interface Landscape {
   zones: Zone[];
@@ -70,10 +71,15 @@ export function summarise(l: Landscape) {
   // Usage by a division other than the owner (unassigned owners count every user).
   const crossUsage = systems.flatMap((s) => usingDivisions(s, l.zones).filter((z) => z !== owningDivision(s, l.zones)).map((z) => ({ system: s, zoneId: z })));
 
+  const flows = dataFlowPairs(systems);
+  const broken = brokenLinks(flows);
+
   return {
     zones,
     systems,
     integrations,
+    flows,
+    broken,
     journeys,
     shared,
     multiUse,
@@ -86,6 +92,8 @@ export function summarise(l: Landscape) {
       .filter((d) => d.value > 0),
     totals: {
       sharedSystems: shared.length,
+      dataFlows: flows.length,
+      brokenLinks: broken.length,
       multiDivision: multiUse.length,
       crossDivisionUsage: crossUsage.length,
       zones: zones.length,
@@ -101,10 +109,11 @@ export function summarise(l: Landscape) {
     byAge: (() => {
       const st = systems.map(buildState);
       return [
-        { name: 'Old infrastructure (over 5 years)', value: st.filter((b) => b.legacy).length, color: '#9a6b4f' },
+        { name: 'Old infrastructure (over 5 years)', value: st.filter((b) => b.legacy && !b.decommissioned).length, color: '#9a6b4f' },
+        { name: 'Decommission', value: st.filter((b) => b.decommissioned).length, color: '#b45309' },
         { name: 'New (5 years or less)', value: st.filter((b) => !b.legacy && !b.developing && b.age !== null).length, color: '#22c3e6' },
         { name: 'Under development', value: st.filter((b) => b.developing).length, color: '#e0a21a' },
-        { name: 'Year not recorded', value: st.filter((b) => !b.developing && b.age === null).length, color: '#94a3b8' },
+        { name: 'Year not recorded', value: st.filter((b) => !b.developing && !b.decommissioned && b.age === null).length, color: '#94a3b8' },
       ].filter((d) => d.value > 0);
     })(),
     byMechanism: countBy(integrations, (i) => i.mechanism, MECHANISMS).filter((d) => d.value > 0),
@@ -121,6 +130,7 @@ export const STATUS_COLORS: Record<string, string> = {
   Live: '#1f9d55',
   Enhancement: '#22c3e6',
   Sunsetting: '#e0a21a',
+  Decommission: '#b45309',
   Retired: '#64748b',
 };
 

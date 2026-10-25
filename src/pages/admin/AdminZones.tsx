@@ -64,7 +64,7 @@ export default function AdminZones() {
         Show archived zones
       </label>
 
-      <div className="overflow-x-auto rounded-[10px] border border-ink-200 bg-white">
+      <div className="overflow-x-auto rounded-[10px] border border-ink-200 bg-surface">
         <table className="w-full min-w-[820px] text-sm">
           <thead className="table-head">
             <tr>
@@ -112,7 +112,7 @@ export default function AdminZones() {
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex justify-end gap-1">
-                      <Button size="sm" variant="ghost" icon={MapPin} onClick={() => navigate(`/?focus=zone:${z.id}`)} disabled={z.archived || !z.visible}>
+                      <Button size="sm" variant="ghost" icon={MapPin} onClick={() => navigate(`/world?focus=zone:${z.id}`)} disabled={z.archived || !z.visible}>
                         View
                       </Button>
                       <Button size="sm" variant="ghost" icon={Pencil} onClick={() => setEditing(z)}>

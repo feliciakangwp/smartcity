@@ -31,7 +31,7 @@ This is a Vite app, so GitHub Pages must serve the **built** files, not the repo
 2. Push to `main` or `claude/nifty-brahmagupta-u20t59`, or run **Actions → Deploy to GitHub Pages → Run workflow**.
 3. The site is published at `https://<owner>.github.io/<repo>/`.
 
-`.github/workflows/deploy-pages.yml` builds with `VITE_BASE=/<repo>/`, so asset paths and routes work under the repository path. It also copies `index.html` to `404.html`, so refreshing a page such as `/dashboard` works.
+`.github/workflows/deploy-pages.yml` builds with `VITE_BASE=/<repo>/`, so asset paths and routes work under the repository path. It also copies `index.html` to `404.html`, so refreshing a page such as `/systems` works.
 
 ### Demo Mode vs shared data
 
@@ -63,6 +63,13 @@ The migration and seed were checked against PostgreSQL 16:
 - Anonymous and non-admin writes are refused.
 - Admin edits are written to `audit_logs`.
 - Two active zones cannot share a plot.
+- `20261027000000_system_lifecycle_and_data_flows.sql` adds the product team, year originated, decommission year, revamps and input / output data, and the `data_flow_tally` view (one row per sender → receiver pair with `ok`, `missing-output` or `missing-input`). Upgrading moves a built system's go-live year into `year_originated`. Only one revamp per system can be ticked for the age, a Decommission status needs a year, and a system cannot send data to itself.
+
+## Port Nexus Overview and the theme
+
+The app opens on the **Port Nexus Overview**: totals (including **broken data links**, which links to the Systems page) and the ICT dashboard charts. **Port World** is the second page. Content pages use about 80% of the screen width on large screens.
+
+The **Dark mode / Light mode** button at the right of the header switches the whole app. The choice is remembered in this browser; until one is made, the system setting is used.
 
 ## Using the Port World
 
@@ -75,7 +82,27 @@ The migration and seed were checked against PostgreSQL 16:
 - **Simulation speed:** Pause, 1×, 2×, 4× (bottom left). Shipping is labelled as simulated activity.
 - **Dashboard strip** across the top shows totals and systems by status. **Expand dashboard** opens the full charts and the impact analysis.
 
-Deep links: `/?focus=system:<id>`, `/?focus=zone:<id>`, `/?focus=ship:<id>`.
+- **Data deliveries:** for every pair of systems whose input / output data tallies (see [Systems and the data tally](#systems-and-the-data-tally)), one white delivery van carries a folder of documents from the sending system's building to the receiving one, hands it over and drives back. Several data items between the same two systems still use one van. A **broken link** shows a broken-down van halfway along the route: bonnet up, a flat tyre, smoke, red beacons and a flashing red alarm sign. The schedule panel lists every delivery; clicking a broken link flies to its van and opens the system that needs fixing.
+
+Deep links: `/world?focus=system:<id>`, `/world?focus=zone:<id>`, `/world?focus=ship:<id>`. Older `/?focus=…` links still open the Port World.
+
+## Systems and the data tally
+
+The **Systems** page lists every system in two groups, **Fully developed** and **Still developing** (Planned or In Development). Select a row to see the system, then **Edit system** to change it; `/systems?system=<id>` links straight to one system. Each system records:
+
+| Field | Notes |
+| --- | --- |
+| Project / Product Team | Free text |
+| System originated | Year, from 1970 to this year |
+| System revamped | Add any number: the year, the areas where maintenance was done, and a tick to use that year for the system's age (only one can be ticked) |
+| Years of the system | Worked out, not entered: this year minus the originated year or the ticked revamp year, whichever is more recent (the younger age) |
+| Status | Planned, In Development, Live, Enhancement, Sunsetting, **Decommission** or Retired. The **Decommission** tick box sets the status and asks for the year of decommission |
+| Input data · from which system | Data the system receives and where it comes from |
+| Output data · to which system | Data the system sends and where it goes |
+
+**Tally check.** If System A lists input data from System B, System B must list output data to System A, and the other way round. A pair where only one side lists the flow is a **broken link**. Broken links are flagged on the Systems page, in the system's details, in the edit form (live, as you type), on the Port Nexus Overview and in the Port World. The check works on the pair of systems, so the data names do not have to match exactly.
+
+The demo seeds four **example** flows (marked "(example)") so the vans can be seen; one of them, TradeNet 4.1 → C2iS, is deliberately listed only by C2iS to show a broken link. Replace them with the real flows.
 
 ## Cross-division shared systems
 
@@ -128,25 +155,25 @@ Spare plots open with **Expand port map**: Jurong West, Sembawang, Ang Mo Kio an
 
 ### System age and build progress
 
-Each system has a **go-live year** and, while in development, a **build progress**:
+A built system's look follows its **years of the system** (from the year it originated or its ticked revamp). A system in development has a **target go-live year** and a **build progress**:
 
 | State | How the building looks |
 | --- | --- |
-| Live and older than 5 years | Old infrastructure, fully built: weathered brick and concrete, grimy windows with rust streaks, a rusty corrugated roof patch, a water tank on stilts, drainpipes, an old satellite dish and wall air-conditioners |
-| Live and 5 years old or less | Modern: bright glass, glowing trim, rooftop solar panels |
+| Built and older than 5 years, or Decommission | Old infrastructure, fully built: weathered brick and concrete, grimy windows with rust streaks, a rusty corrugated roof patch, a water tank on stilts, drainpipes, an old satellite dish and wall air-conditioners |
+| Built and 5 years old or less (counting from a ticked revamp) | Modern: bright glass, glowing trim, rooftop solar panels |
 | Planned / In Development, 0% | Fenced empty site with a sign |
 | 1–10% | Foundation slab with rebar |
 | Over 10% | Built up to that share of its height, with scaffolding, a ghost of the finished volume and a tower crane |
 
-The demo's go-live years and the eCustoms module names and usage are **placeholders** to confirm in the System Registry.
+The demo's originated years and the eCustoms module names and usage are **placeholders** to confirm in the System Registry.
 
 ## Routes
 
 | Route | Page |
 | --- | --- |
-| `/` | Port World (3D) |
-| `/dashboard` | Full ICT dashboard |
-| `/systems` | System Directory: search, filter, show in port |
+| `/` | Port Nexus Overview (landing page): totals, broken data links and the ICT dashboard |
+| `/world` | Port World (3D) |
+| `/systems` | Systems: fully developed and still developing, with view and edit (`?system=<id>`) |
 | `/journeys` | Data Journey Explorer (`?system=<id>` filters to one system) |
 | `/admin` | Port Management Studio overview |
 | `/admin/zones` | Zone Management |
@@ -172,7 +199,9 @@ src/
     datasource.ts          Demo Mode / Supabase detection (anon client only)
     placement.ts           Zone layouts and building slots (pure functions)
     metrics.ts             Dashboard figures, ownership/usage and impact analysis, all from stored records
-    systemAge.ts           Legacy / modern / under-construction state from year, status and progress
+    systemAge.ts           Years of the system (originated or ticked revamp), legacy / modern / under-construction state
+    dataFlows.ts           Input / output tally: sender -> receiver pairs and broken links
+    theme.ts               Light / dark theme, remembered in this browser
   store/
     landscape.ts           Zustand store for records + actions, persisted in Demo Mode
     world.ts               UI state: selection, camera focus, toggles, speed, quality
@@ -191,6 +220,8 @@ src/
     maritime/              Ships, quay cranes, apron, container yard, trucks, sim context
     CameraRig.tsx          Smooth flights and ship following
     IntegrationLines.tsx   Arcs between buildings coloured by data type
+    DataVans.tsx           Delivery vans for matched data flows, broken-down vans for broken links
+    Officers.tsx           Officers in navy uniforms patrolling the zones
   components/              App shell, dashboard, world overlays, forms, UI primitives
   pages/                   Routes, including admin/*
 supabase/

@@ -52,7 +52,7 @@ export default function AdminSystems() {
       </PageHead>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-md border border-ink-200 bg-white px-3">
+        <label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-md border border-ink-200 bg-surface px-3">
           <Search className="h-4 w-4 text-ink-500" aria-hidden />
           <input id="reg-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or acronym" className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none" />
         </label>
@@ -69,7 +69,7 @@ export default function AdminSystems() {
         </label>
       </div>
 
-      <div className="overflow-x-auto rounded-[10px] border border-ink-200 bg-white">
+      <div className="overflow-x-auto rounded-[10px] border border-ink-200 bg-surface">
         <table className="w-full min-w-[820px] text-sm">
           <thead className="table-head">
             <tr>
@@ -88,7 +88,7 @@ export default function AdminSystems() {
               return (
                 <tr key={s.id} className={`border-t border-ink-100 ${s.archived ? 'opacity-55' : ''}`}>
                   <td className="px-4 py-2">
-                    <span className="mr-2 font-mono text-xs font-semibold text-navy-700">{s.acronym}</span>
+                    <span className="mr-2 font-mono text-xs font-semibold text-heading-soft">{s.acronym}</span>
                     <span className="font-semibold">{s.name}</span>
                     {s.archived && <Chip className="ml-2">Archived</Chip>}
                   </td>
@@ -109,7 +109,7 @@ export default function AdminSystems() {
                   <td className="num px-4 py-2 text-ink-500">{new Date(s.updatedAt).toLocaleDateString()}</td>
                   <td className="px-4 py-2">
                     <div className="flex justify-end gap-1">
-                      <Button size="sm" variant="ghost" icon={MapPin} disabled={s.archived} onClick={() => navigate(`/?focus=system:${s.id}`)}>View</Button>
+                      <Button size="sm" variant="ghost" icon={MapPin} disabled={s.archived} onClick={() => navigate(`/world?focus=system:${s.id}`)}>View</Button>
                       <Button size="sm" variant="ghost" icon={Pencil} onClick={() => setEditing(s)}>Edit</Button>
                       {s.archived ? (
                         <Button size="sm" variant="ghost" icon={ArchiveRestore} onClick={() => archiveSystem(s.id, false)}>Restore</Button>

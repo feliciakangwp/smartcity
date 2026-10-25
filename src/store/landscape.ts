@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
 import type { Integration, LandscapeData, PlatformSettings, SimulationSettings, System, Zone } from '@/types/domain';
-import { createSeed, SEED_VERSION } from '@/data/seed';
+import { createSeed, SEED_VERSION, seedDataFlows } from '@/data/seed';
 import { upgradeLandscape } from '@/data/upgrade';
 import { DEMO_STORAGE_KEY } from '@/lib/datasource';
 
@@ -112,6 +112,16 @@ export const useLandscape = create<LandscapeStore>()(
               ? { ...s, status: seedTn5.status, yearIntroduced: seedTn5.yearIntroduced, buildProgress: seedTn5.buildProgress, businessPurpose: seedTn5.businessPurpose }
               : s,
           );
+        }
+        // v6: built systems record the year they originated (was the go-live year), and the
+        // example input / output flows are added when no flows have been entered yet.
+        if (version < 6 && state.systems) {
+          const flows = seedDataFlows();
+          const none = state.systems.every((s) => !s.inputs?.length && !s.outputs?.length);
+          state.systems = state.systems.map((s) => ({
+            ...s,
+            ...(none ? { inputs: flows.inputs[s.id] ?? s.inputs, outputs: flows.outputs[s.id] ?? s.outputs } : {}),
+          }));
         }
         return upgradeLandscape(state) as LandscapeStore;
       },

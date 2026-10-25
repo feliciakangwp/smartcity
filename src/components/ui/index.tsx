@@ -8,9 +8,9 @@ export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Bool
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 const variants: Record<Variant, string> = {
   primary: 'bg-navy-800 text-white hover:bg-navy-700 border-navy-800',
-  secondary: 'bg-white text-ink-900 hover:border-ink-300 border-ink-200',
+  secondary: 'bg-surface text-ink-900 hover:border-ink-300 border-ink-200',
   ghost: 'bg-transparent text-ink-700 hover:bg-ink-100 border-transparent',
-  danger: 'bg-white text-red-700 hover:bg-red-50 border-red-200',
+  danger: 'bg-surface text-red-700 hover:bg-red-50 border-red-200',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; icon?: LucideIcon; size?: 'sm' | 'md' }>(
@@ -43,7 +43,7 @@ export function IconButton({ icon: Icon, label, active, onClick, className }: { 
       onClick={onClick}
       className={cx(
         'grid h-9 w-9 place-items-center rounded-md border transition-colors',
-        active ? 'border-nexus-400 bg-nexus-100 text-navy-800' : 'border-transparent text-ink-700 hover:bg-ink-100',
+        active ? 'border-nexus-400 bg-nexus-100 text-heading' : 'border-transparent text-ink-700 hover:bg-ink-100',
         className,
       )}
     >
@@ -54,7 +54,7 @@ export function IconButton({ icon: Icon, label, active, onClick, className }: { 
 
 export function Chip({ children, color, className }: { children: ReactNode; color?: string; className?: string }) {
   return (
-    <span className={cx('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-ink-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-ink-700', className)}>
+    <span className={cx('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-ink-200 bg-surface px-2 py-0.5 text-[11px] font-semibold text-ink-700', className)}>
       {color && <span className="h-2 w-2 rounded-full" style={{ background: color }} />}
       {children}
     </span>

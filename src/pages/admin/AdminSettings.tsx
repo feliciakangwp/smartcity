@@ -42,8 +42,8 @@ export default function AdminSettings() {
     <>
       <PageHead eyebrow="Settings" title="Platform settings" />
       <div className="grid gap-4 lg:grid-cols-2">
-        <section className="flex flex-col gap-3 rounded-[10px] border border-ink-200 bg-white p-5">
-          <h2 className="font-bold text-navy-900">Branding</h2>
+        <section className="flex flex-col gap-3 rounded-[10px] border border-ink-200 bg-surface p-5">
+          <h2 className="font-bold text-heading">Branding</h2>
           <label className="flex flex-col gap-1">
             <span className="label">Platform name</span>
             <input id="set-name" className="input" value={platform.name} onChange={(e) => setPlatform({ name: e.target.value })} />
@@ -53,8 +53,8 @@ export default function AdminSettings() {
             <input id="set-tagline" className="input" value={platform.tagline} onChange={(e) => setPlatform({ tagline: e.target.value })} />
           </label>
         </section>
-        <section className="flex flex-col gap-3 rounded-[10px] border border-ink-200 bg-white p-5">
-          <h2 className="font-bold text-navy-900">Graphics quality</h2>
+        <section className="flex flex-col gap-3 rounded-[10px] border border-ink-200 bg-surface p-5">
+          <h2 className="font-bold text-heading">Graphics quality</h2>
           <label className="flex flex-col gap-1">
             <span className="label">Quality</span>
             <select id="set-quality" className="input" value={platform.quality} onChange={(e) => setPlatform({ quality: e.target.value as Quality })}>
@@ -66,8 +66,8 @@ export default function AdminSettings() {
           </label>
           <p className="text-xs text-ink-500">Automatic starts high on desktops and low on phones, then steps down if the frame rate drops.</p>
         </section>
-        <section className="flex flex-col gap-3 rounded-[10px] border border-ink-200 bg-white p-5">
-          <h2 className="font-bold text-navy-900">Export and import</h2>
+        <section className="flex flex-col gap-3 rounded-[10px] border border-ink-200 bg-surface p-5">
+          <h2 className="font-bold text-heading">Export and import</h2>
           <p className="text-sm text-ink-700">Export saves every zone, system, integration, journey and vessel as JSON. Import replaces the landscape in this browser.</p>
           <div className="flex flex-wrap gap-2">
             <Button icon={Download} onClick={download}>Export JSON</Button>
@@ -76,8 +76,8 @@ export default function AdminSettings() {
           </div>
           {importError && <p className="text-sm font-medium text-red-700">{importError}</p>}
         </section>
-        <section className="flex flex-col gap-3 rounded-[10px] border border-ink-200 bg-white p-5">
-          <h2 className="font-bold text-navy-900">Demo data</h2>
+        <section className="flex flex-col gap-3 rounded-[10px] border border-ink-200 bg-surface p-5">
+          <h2 className="font-bold text-heading">Demo data</h2>
           <p className="text-sm text-ink-700">Restore the six seed zones, placeholder systems and demonstration journeys. Your changes in this browser are discarded.</p>
           {confirmReset ? (
             <div className="flex flex-wrap items-center gap-2 text-sm">

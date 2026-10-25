@@ -1,8 +1,9 @@
 // Add / edit system form, shared by the Port World dialog and the Studio registry.
 import { useState, type FormEvent } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
-import { CRITICALITIES, LEGACY_AGE_YEARS, SYSTEM_CATEGORIES, SYSTEM_STATUSES, type System, type SystemModule, type Zone } from '@/types/domain';
-import { CURRENT_YEAR } from '@/lib/systemAge';
+import { AlertTriangle, CheckCircle2, Plus, Trash2 } from 'lucide-react';
+import { CRITICALITIES, FIRST_SYSTEM_YEAR, LEGACY_AGE_YEARS, SYSTEM_CATEGORIES, SYSTEM_STATUSES, type System, type SystemModule, type Zone } from '@/types/domain';
+import { CURRENT_YEAR, ageBaseYear, isDeveloping } from '@/lib/systemAge';
+import { brokenReason, dataFlowPairs, flowsFor } from '@/lib/dataFlows';
 import type { NewSystem } from '@/store/landscape';
 import { useLandscape } from '@/store/landscape';
 import { activeZones } from '@/lib/metrics';
@@ -25,11 +26,21 @@ export function blankSystem(zoneId: string, zones: Zone[] = []): NewSystem {
     techStack: '',
     owner: '',
     endpoints: '',
+    productTeam: '',
+    revamps: [],
+    inputs: [],
+    outputs: [],
     docs: [],
   };
 }
 
-type Errors = Partial<Record<'name' | 'acronym' | 'zoneId' | 'owningZoneId' | 'usingZoneIds' | 'docs' | 'yearIntroduced' | 'modules', string>>;
+/** Years offered in the year dropdowns, newest first. */
+const yearsFrom = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => to - i);
+const ORIGIN_YEARS = yearsFrom(FIRST_SYSTEM_YEAR, CURRENT_YEAR);
+
+type Errors = Partial<
+  Record<'name' | 'acronym' | 'zoneId' | 'owningZoneId' | 'usingZoneIds' | 'docs' | 'yearIntroduced' | 'modules' | 'revamps' | 'decommissionYear' | 'inputs' | 'outputs', string>
+>;
 
 export function validateSystem(v: NewSystem, all: System[], selfId?: string, zones: Zone[] = []): Errors {
   const e: Errors = {};
@@ -39,6 +50,18 @@ export function validateSystem(v: NewSystem, all: System[], selfId?: string, zon
   else if (all.some((s) => !s.archived && s.id !== selfId && s.acronym.toUpperCase() === ac.toUpperCase())) e.acronym = `${ac} is already used by another system.`;
   if (v.yearIntroduced !== undefined && (!Number.isInteger(v.yearIntroduced) || v.yearIntroduced < 1980 || v.yearIntroduced > 2050)) e.yearIntroduced = 'Enter a year between 1980 and 2050.';
   if ((v.modules ?? []).some((m) => !m.name.trim())) e.modules = 'Give every module a name.';
+  const revamps = v.revamps ?? [];
+  if (revamps.some((r) => !Number.isInteger(r.year))) e.revamps = 'Choose the year of every revamp.';
+  else if (v.yearOriginated !== undefined && revamps.some((r) => r.year < v.yearOriginated!)) e.revamps = 'A revamp cannot be earlier than the year the system originated.';
+  else if (revamps.filter((r) => r.useForAge).length > 1) e.revamps = 'Tick only one revamp to count the age from.';
+  if (v.status === 'Decommission') {
+    if (!Number.isInteger(v.decommissionYear)) e.decommissionYear = 'Choose the year of decommission.';
+    else if (v.yearOriginated !== undefined && v.decommissionYear! < v.yearOriginated) e.decommissionYear = 'Decommission cannot be before the system originated.';
+  }
+  if ((v.inputs ?? []).some((i) => !i.data.trim() || !i.fromSystemId)) e.inputs = 'For each input, enter the data and choose the system it comes from.';
+  else if ((v.inputs ?? []).some((i) => i.fromSystemId === selfId)) e.inputs = 'A system cannot send input to itself.';
+  if ((v.outputs ?? []).some((o) => !o.data.trim() || !o.toSystemId)) e.outputs = 'For each output, enter the data and choose the system it goes to.';
+  else if ((v.outputs ?? []).some((o) => o.toSystemId === selfId)) e.outputs = 'A system cannot send output to itself.';
   if (!v.zoneId) e.zoneId = 'Choose the zone where the building is displayed.';
   const division = (id: string) => zones.length === 0 || zones.some((z) => z.id === id && z.kind === 'division' && !z.archived);
   if (v.owningZoneId && !division(v.owningZoneId)) e.owningZoneId = 'The owner must be a division, not a shared zone.';
@@ -68,15 +91,19 @@ export function SystemForm({
   const [v, setV] = useState<NewSystem>(initial);
   const [errors, setErrors] = useState<Errors>({});
   const set = <K extends keyof NewSystem>(k: K, val: NewSystem[K]) => setV((x) => ({ ...x, [k]: val }));
-  const developing = v.status === 'Planned' || v.status === 'In Development';
-  const age = v.yearIntroduced ? CURRENT_YEAR - v.yearIntroduced : null;
+  const developing = isDeveloping(v);
+  const decommissioned = v.status === 'Decommission';
+  const base = ageBaseYear(v);
+  const age = base ? Math.max(0, CURRENT_YEAR - base.year) : null;
   const ageHint = developing
-    ? 'Shown as a new, modern building once built.'
+    ? 'Still developing: shown as a new, modern building once built.'
     : age === null
-      ? 'Systems older than 5 years look like legacy buildings.'
-      : age > LEGACY_AGE_YEARS
-        ? `${age} years old: shown as a legacy building.`
-        : `${age} year${age === 1 ? '' : 's'} old: shown as a new, modern building.`;
+      ? 'Choose the year the system originated. Systems older than 5 years are drawn as old infrastructure.'
+      : `Counted from ${base!.from === 'revamp' ? `the ${base!.year} revamp` : `${base!.year}, when it originated`}. ${
+          decommissioned ? 'Decommissioned: drawn as old infrastructure.' : age > LEGACY_AGE_YEARS ? 'Drawn as old infrastructure.' : 'Drawn as a new, modern building.'
+        }`;
+  const setStatus = (status: NewSystem['status']) =>
+    setV((x) => ({ ...x, status, decommissionYear: status === 'Decommission' ? (x.decommissionYear ?? CURRENT_YEAR) : undefined }));
 
   const submit = (ev: FormEvent) => {
     ev.preventDefault();
@@ -89,7 +116,13 @@ export function SystemForm({
       acronym: v.acronym.trim(),
       usingZoneIds: [...new Set(v.usingZoneIds)],
       modules: v.modules?.length ? v.modules.map((m) => ({ ...m, name: m.name.trim(), usingZoneIds: [...new Set(m.usingZoneIds)] })) : undefined,
-      buildProgress: v.status === 'Planned' || v.status === 'In Development' ? (v.buildProgress ?? 0) : undefined,
+      buildProgress: developing ? (v.buildProgress ?? 0) : undefined,
+      yearIntroduced: developing ? v.yearIntroduced : undefined,
+      decommissionYear: decommissioned ? v.decommissionYear : undefined,
+      productTeam: v.productTeam?.trim() ?? '',
+      revamps: (v.revamps ?? []).map((r) => ({ ...r, areas: r.areas.trim() })),
+      inputs: (v.inputs ?? []).map((i) => ({ ...i, data: i.data.trim() })),
+      outputs: (v.outputs ?? []).map((o) => ({ ...o, data: o.data.trim() })),
       docs: v.docs.filter((d) => d.url.trim()).map((d) => ({ label: d.label.trim() || d.url.trim(), url: d.url.trim() })),
     });
   };
@@ -122,7 +155,7 @@ export function SystemForm({
         </label>
         <label className="flex flex-col gap-1">
           <span className="label">Status</span>
-          <select id="sys-status" className="input" value={v.status} onChange={(e) => set('status', e.target.value as NewSystem['status'])}>
+          <select id="sys-status" className="input" value={v.status} onChange={(e) => setStatus(e.target.value as NewSystem['status'])}>
             {SYSTEM_STATUSES.map((c) => (
               <option key={c}>{c}</option>
             ))}
@@ -137,19 +170,11 @@ export function SystemForm({
           </select>
         </label>
         <label className="flex flex-col gap-1">
-          <span className="label">{developing ? 'Target go-live year' : 'Go-live year'}</span>
-          <input
-            id="sys-year"
-            type="number"
-            className="input num"
-            value={v.yearIntroduced ?? ''}
-            onChange={(e) => set('yearIntroduced', e.target.value === '' ? undefined : Number(e.target.value))}
-            placeholder="e.g. 2014"
-          />
-          <span className="text-[11px] text-ink-500">{ageHint}</span>
-          {err('yearIntroduced')}
+          <span className="label">Project / Product Team</span>
+          <input id="sys-team" className="input" value={v.productTeam ?? ''} onChange={(e) => set('productTeam', e.target.value)} placeholder="e.g. Trade Platforms Team" />
         </label>
       </div>
+      <AgeFields v={v} setV={setV} age={age} ageHint={ageHint} errors={errors} setStatus={setStatus} />
       {developing && (
         <label className="flex flex-col gap-1">
           <span className="label">Development progress: {v.buildProgress ?? 0}%</span>
@@ -159,6 +184,7 @@ export function SystemForm({
       )}
       <ModulesEditor v={v} setV={setV} divisions={divisions} />
       {err('modules')}
+      <DataFlowFields v={v} setV={setV} selfId={selfId} systems={systems} errors={errors} />
       <label className="flex flex-col gap-1">
         <span className="label">Description</span>
         <textarea id="sys-desc" className="input min-h-[64px]" value={v.description} onChange={(e) => set('description', e.target.value)} />
@@ -292,7 +318,7 @@ function OwnershipFields({
                 onClick={() => toggleUser(z.id)}
                 className={cx(
                   'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors',
-                  on ? 'border-navy-700 bg-navy-800 text-white' : 'border-ink-200 bg-white text-ink-700 hover:border-ink-300',
+                  on ? 'border-navy-700 bg-navy-800 text-white' : 'border-ink-200 bg-surface text-ink-700 hover:border-ink-300',
                 )}
               >
                 <ZoneSwatch color={z.color} className="h-2.5 w-2.5" />
@@ -360,7 +386,7 @@ function ModulesEditor({ v, setV, divisions }: { v: NewSystem; setV: React.Dispa
                   onClick={() =>
                     update(modules.map((x) => (x.id === m.id ? { ...x, usingZoneIds: on ? x.usingZoneIds.filter((u) => u !== z.id) : [...x.usingZoneIds, z.id] } : x)))
                   }
-                  className={cx('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold', on ? 'border-navy-700 bg-navy-800 text-white' : 'border-ink-200 bg-white text-ink-700')}
+                  className={cx('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold', on ? 'border-navy-700 bg-navy-800 text-white' : 'border-ink-200 bg-surface text-ink-700')}
                 >
                   <ZoneSwatch color={z.color} className="h-2 w-2" />
                   {z.name}
@@ -375,6 +401,269 @@ function ModulesEditor({ v, setV, divisions }: { v: NewSystem; setV: React.Dispa
           Add module
         </Button>
       </div>
+    </fieldset>
+  );
+}
+
+const newRowId = newModuleId;
+
+/** System originated, revamps (one can be ticked for the age), years of the system and decommission. */
+function AgeFields({
+  v,
+  setV,
+  age,
+  ageHint,
+  errors,
+  setStatus,
+}: {
+  v: NewSystem;
+  setV: React.Dispatch<React.SetStateAction<NewSystem>>;
+  age: number | null;
+  ageHint: string;
+  errors: Errors;
+  setStatus: (s: NewSystem['status']) => void;
+}) {
+  const developing = isDeveloping(v);
+  const decommissioned = v.status === 'Decommission';
+  const revamps = v.revamps ?? [];
+  const setRevamps = (next: NonNullable<NewSystem['revamps']>) => setV((x) => ({ ...x, revamps: next }));
+  const err = (k: keyof Errors) => errors[k] && <span className="text-xs font-medium text-red-700">{errors[k]}</span>;
+  const revampYears = yearsFrom(v.yearOriginated ?? FIRST_SYSTEM_YEAR, CURRENT_YEAR);
+
+  return (
+    <fieldset className="flex flex-col gap-3 rounded-md border border-ink-200 bg-harbor-50/60 p-3">
+      <legend className="px-1 text-xs font-semibold text-ink-700">Age and lifecycle</legend>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="flex flex-col gap-1">
+          <span className="label">System originated</span>
+          <select
+            id="sys-originated"
+            className="input num"
+            value={v.yearOriginated ?? ''}
+            onChange={(e) => setV((x) => ({ ...x, yearOriginated: e.target.value === '' ? undefined : Number(e.target.value) }))}
+          >
+            <option value="">Not recorded</option>
+            {ORIGIN_YEARS.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="flex flex-col gap-1">
+          <span className="label">Years of the system</span>
+          <output id="sys-years" className="num rounded-md border border-ink-200 bg-surface px-3 py-2 text-sm font-semibold text-heading">
+            {developing ? 'Still developing' : age === null ? '—' : `${age} year${age === 1 ? '' : 's'}`}
+          </output>
+        </div>
+        {developing ? (
+          <label className="flex flex-col gap-1">
+            <span className="label">Target go-live year</span>
+            <select
+              id="sys-year"
+              className="input num"
+              value={v.yearIntroduced ?? ''}
+              onChange={(e) => setV((x) => ({ ...x, yearIntroduced: e.target.value === '' ? undefined : Number(e.target.value) }))}
+            >
+              <option value="">Not set</option>
+              {yearsFrom(CURRENT_YEAR, CURRENT_YEAR + 10)
+                .reverse()
+                .map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+            </select>
+            {err('yearIntroduced')}
+          </label>
+        ) : (
+          <div className="flex flex-col gap-1">
+            <label className="flex items-center gap-2 pt-6 text-sm font-semibold text-ink-700">
+              <input id="sys-decommission" type="checkbox" className="h-4 w-4 accent-amber-700" checked={decommissioned} onChange={(e) => setStatus(e.target.checked ? 'Decommission' : 'Live')} />
+              Decommission
+            </label>
+          </div>
+        )}
+      </div>
+      <span className="text-[11px] text-ink-500">{ageHint}</span>
+      {decommissioned && (
+        <label className="flex max-w-[220px] flex-col gap-1">
+          <span className="label">Year of decommission</span>
+          <select
+            id="sys-decommission-year"
+            className="input num"
+            value={v.decommissionYear ?? ''}
+            onChange={(e) => setV((x) => ({ ...x, decommissionYear: e.target.value === '' ? undefined : Number(e.target.value) }))}
+          >
+            <option value="">Choose a year…</option>
+            {yearsFrom(v.yearOriginated ?? FIRST_SYSTEM_YEAR, CURRENT_YEAR + 10).map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+          {err('decommissionYear')}
+        </label>
+      )}
+      <div className="flex flex-col gap-2">
+        {revamps.map((r, i) => (
+          <div key={r.id} className="grid gap-2 rounded-md border border-ink-200 bg-surface p-2 sm:grid-cols-[120px_1fr_auto_auto] sm:items-center">
+            <select
+              id={`revamp-year-${i}`}
+              className="input num"
+              aria-label={`Revamp ${i + 1} year`}
+              value={Number.isInteger(r.year) ? r.year : ''}
+              onChange={(e) => setRevamps(revamps.map((x) => (x.id === r.id ? { ...x, year: Number(e.target.value) } : x)))}
+            >
+              <option value="">Year…</option>
+              {revampYears.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+            <input
+              id={`revamp-areas-${i}`}
+              className="input"
+              aria-label={`Revamp ${i + 1} areas of maintenance`}
+              placeholder="Areas where maintenance was done"
+              value={r.areas}
+              onChange={(e) => setRevamps(revamps.map((x) => (x.id === r.id ? { ...x, areas: e.target.value } : x)))}
+            />
+            <label className="flex items-center gap-1.5 whitespace-nowrap text-xs font-semibold text-ink-700">
+              <input
+                id={`revamp-age-${i}`}
+                type="checkbox"
+                className="h-4 w-4 accent-navy-800"
+                checked={r.useForAge}
+                // Only one revamp counts for the age, so ticking one clears the others.
+                onChange={(e) => setRevamps(revamps.map((x) => ({ ...x, useForAge: x.id === r.id ? e.target.checked : e.target.checked ? false : x.useForAge })))}
+              />
+              Use for years of the system
+            </label>
+            <button type="button" className="justify-self-end rounded-md px-2 py-1.5 text-ink-500 hover:bg-red-50 hover:text-red-700" aria-label={`Remove revamp ${i + 1}`} onClick={() => setRevamps(revamps.filter((x) => x.id !== r.id))}>
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+        {err('revamps')}
+        <div>
+          <Button type="button" size="sm" icon={Plus} id="sys-add-revamp" onClick={() => setRevamps([...revamps, { id: newRowId(), year: CURRENT_YEAR, areas: '', useForAge: false }])}>
+            System revamped
+          </Button>
+        </div>
+      </div>
+    </fieldset>
+  );
+}
+
+/** Input data (from which system) and output data (to which system), with the tally against the other systems. */
+function DataFlowFields({
+  v,
+  setV,
+  selfId,
+  systems,
+  errors,
+}: {
+  v: NewSystem;
+  setV: React.Dispatch<React.SetStateAction<NewSystem>>;
+  selfId?: string;
+  systems: System[];
+  errors: Errors;
+}) {
+  const others = systems.filter((s) => !s.archived && s.id !== selfId).sort((a, b) => a.acronym.localeCompare(b.acronym));
+  const inputs = v.inputs ?? [];
+  const outputs = v.outputs ?? [];
+  const err = (k: keyof Errors) => errors[k] && <span className="text-xs font-medium text-red-700">{errors[k]}</span>;
+  // Tally this draft against what the other systems currently list.
+  const draftId = selfId ?? '__draft__';
+  const draft = { ...(v as System), id: draftId, archived: false, inputs, outputs };
+  const pairs = dataFlowPairs([...others, draft]);
+  const mine = flowsFor(draftId, pairs);
+  const nameOf = (id: string) => (id === draftId ? v.acronym || 'This system' : (systems.find((s) => s.id === id)?.acronym ?? 'Unknown'));
+  const tally = [...mine.incoming, ...mine.outgoing];
+
+  const row = (kind: 'inputs' | 'outputs') => {
+    const list = kind === 'inputs' ? inputs : outputs;
+    const field = kind === 'inputs' ? 'fromSystemId' : 'toSystemId';
+    const update = (next: typeof list) => setV((x) => ({ ...x, [kind]: next }));
+    return (
+      <div className="flex flex-col gap-2">
+        {list.map((item, i) => (
+          <div key={item.id} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+            <input
+              id={`${kind}-data-${i}`}
+              className="input"
+              aria-label={`${kind === 'inputs' ? 'Input' : 'Output'} data ${i + 1}`}
+              placeholder={kind === 'inputs' ? 'Input data' : 'Output data'}
+              value={item.data}
+              onChange={(e) => update(list.map((x) => (x.id === item.id ? { ...x, data: e.target.value } : x)) as typeof list)}
+            />
+            <select
+              id={`${kind}-system-${i}`}
+              className="input"
+              aria-label={kind === 'inputs' ? `From which system (input ${i + 1})` : `To which system (output ${i + 1})`}
+              value={'fromSystemId' in item ? item.fromSystemId : item.toSystemId}
+              onChange={(e) => update(list.map((x) => (x.id === item.id ? { ...x, [field]: e.target.value } : x)) as typeof list)}
+            >
+              <option value="">{kind === 'inputs' ? 'From which system…' : 'To which system…'}</option>
+              {others.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.acronym} · {s.name}
+                </option>
+              ))}
+            </select>
+            <button type="button" className="rounded-md px-2 text-ink-500 hover:bg-red-50 hover:text-red-700" aria-label={`Remove ${kind === 'inputs' ? 'input' : 'output'} ${i + 1}`} onClick={() => update(list.filter((x) => x.id !== item.id) as typeof list)}>
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+        {err(kind)}
+        <div>
+          <Button
+            type="button"
+            size="sm"
+            icon={Plus}
+            id={`sys-add-${kind}`}
+            onClick={() => update([...list, kind === 'inputs' ? { id: newRowId(), data: '', fromSystemId: '' } : { id: newRowId(), data: '', toSystemId: '' }] as typeof list)}
+          >
+            {kind === 'inputs' ? 'Add input data' : 'Add output data'}
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <fieldset className="flex flex-col gap-3 rounded-md border border-ink-200 p-3">
+      <legend className="px-1 text-xs font-semibold text-ink-700">Input and output data</legend>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <span className="label">Input data · from which system</span>
+          {row('inputs')}
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <span className="label">Output data · to which system</span>
+          {row('outputs')}
+        </div>
+      </div>
+      {tally.length > 0 && (
+        <div className="flex flex-col gap-1 border-t border-ink-100 pt-2" id="sys-tally">
+          <span className="label">Tally check</span>
+          {tally.map((p) => (
+            <div key={`${p.fromId}>${p.toId}`} className="flex items-start gap-1.5 text-xs">
+              {p.status === 'ok' ? (
+                <CheckCircle2 className="mt-px h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
+              ) : (
+                <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0 text-red-600" aria-hidden />
+              )}
+              <span className={p.status === 'ok' ? 'text-ink-700' : 'font-semibold text-red-700'}>
+                {nameOf(p.fromId)} → {nameOf(p.toId)}: {p.status === 'ok' ? 'listed on both systems.' : `broken link. ${brokenReason(p, nameOf)}`}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </fieldset>
   );
 }

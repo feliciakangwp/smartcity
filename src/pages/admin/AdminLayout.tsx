@@ -17,7 +17,7 @@ const ITEMS = [
 export default function AdminLayout() {
   return (
     <div className="flex h-full flex-col md:flex-row">
-      <aside className="shrink-0 border-b border-ink-200 bg-white md:w-60 md:border-b-0 md:border-r">
+      <aside className="shrink-0 border-b border-ink-200 bg-surface md:w-60 md:border-b-0 md:border-r">
         <div className="hidden px-4 pb-2 pt-5 md:block">
           <div className="eyebrow">Port Management Studio</div>
         </div>
@@ -28,7 +28,7 @@ export default function AdminLayout() {
               to={to}
               end={end}
               className={({ isActive }) =>
-                cx('flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold', isActive ? 'bg-harbor-100 text-navy-900' : 'text-ink-700 hover:bg-ink-100')
+                cx('flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold', isActive ? 'bg-harbor-100 text-heading' : 'text-ink-700 hover:bg-ink-100')
               }
             >
               <Icon className="h-4 w-4" aria-hidden /> {label}
@@ -54,7 +54,7 @@ export function PageHead({ eyebrow, title, children, actions }: { eyebrow: strin
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div>
         <div className="eyebrow">{eyebrow}</div>
-        <h1 className="mt-1 text-2xl font-bold text-navy-900">{title}</h1>
+        <h1 className="mt-1 text-2xl font-bold text-heading">{title}</h1>
         {children && <p className="mt-1 max-w-[70ch] text-sm text-ink-700">{children}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -65,7 +65,7 @@ export function PageHead({ eyebrow, title, children, actions }: { eyebrow: strin
 export function PhaseNote({ phase, children }: { phase: number; children: React.ReactNode }) {
   return (
     <div className="mb-4 rounded-md border border-harbor-300 bg-harbor-50 px-4 py-3 text-sm text-ink-700">
-      <b className="text-navy-800">Phase {phase}.</b> {children}
+      <b className="text-heading">Phase {phase}.</b> {children}
     </div>
   );
 }

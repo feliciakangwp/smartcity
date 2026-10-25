@@ -3,6 +3,8 @@
 import type { LandscapeData, System, Zone } from '@/types/domain';
 import { PORTS } from './layout';
 
+const developing = (s: System) => s.status === 'Planned' || s.status === 'In Development';
+
 export function upgradeLandscape<T extends Partial<LandscapeData>>(data: T): T {
   const zones: Zone[] = (data.zones ?? []).map((z) => ({ ...z, kind: z.kind ?? (z.theme === 'shared' ? 'shared' : 'division') }));
   const isDivision = (id: string | null | undefined) => !!id && zones.some((z) => z.id === id && z.kind === 'division');
@@ -12,7 +14,18 @@ export function upgradeLandscape<T extends Partial<LandscapeData>>(data: T): T {
   const systems: System[] = (data.systems ?? []).map((s) => {
     const owningZoneId = s.owningZoneId !== undefined ? s.owningZoneId : isDivision(s.zoneId) ? s.zoneId : null;
     const usingZoneIds = Array.isArray(s.usingZoneIds) ? [...new Set(s.usingZoneIds)] : owningZoneId ? [owningZoneId] : [];
-    return { ...s, owningZoneId, usingZoneIds, modules: Array.isArray(s.modules) ? s.modules : undefined };
+    // The go-live year of a built system becomes the year it originated.
+    const moveYear = s.yearOriginated === undefined && s.yearIntroduced !== undefined && !developing(s) && s.yearIntroduced <= new Date().getFullYear();
+    return {
+      ...s,
+      owningZoneId,
+      usingZoneIds,
+      modules: Array.isArray(s.modules) ? s.modules : undefined,
+      ...(moveYear ? { yearOriginated: s.yearIntroduced, yearIntroduced: undefined } : {}),
+      revamps: Array.isArray(s.revamps) ? s.revamps : [],
+      inputs: Array.isArray(s.inputs) ? s.inputs : [],
+      outputs: Array.isArray(s.outputs) ? s.outputs : [],
+    };
   });
 
   const portIds = new Set(PORTS.map((p) => p.id));
