@@ -1,6 +1,7 @@
 // Top navigation shared by every page, with the data-mode badge.
 import { NavLink, Outlet } from 'react-router-dom';
-import { Anchor, Database, LayoutDashboard, Moon, Route, Settings2, Ship, Sun } from 'lucide-react';
+import { Anchor, Database, LayoutDashboard, LogOut, Moon, Route, Settings2, Ship, Sun } from 'lucide-react';
+import { accessRequired, lock } from '@/lib/access';
 import { useTheme } from '@/lib/theme';
 import { useLandscape } from '@/store/landscape';
 import { dataMode, supabaseConfigured } from '@/lib/datasource';
@@ -48,6 +49,18 @@ export function AppShell() {
         </nav>
         <DataModeBadge />
         <ThemeToggle />
+        {accessRequired && (
+          <button
+            type="button"
+            id="sign-out"
+            onClick={lock}
+            title="Sign out"
+            aria-label="Sign out"
+            className="grid shrink-0 place-items-center rounded-md border border-white/15 p-1.5 text-harbor-300 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <LogOut className="h-4 w-4" aria-hidden />
+          </button>
+        )}
       </header>
       <main className="relative min-h-0 flex-1">
         <Outlet />

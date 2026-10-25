@@ -33,6 +33,18 @@ This is a Vite app, so GitHub Pages must serve the **built** files, not the repo
 
 `.github/workflows/deploy-pages.yml` builds with `VITE_BASE=/<repo>/`, so asset paths and routes work under the repository path. It also copies `index.html` to `404.html`, so refreshing a page such as `/systems` works.
 
+### Password (login page)
+
+When the site is built with a password, visitors see a login page first. The app's code is only downloaded after the right password is entered. **Keep me signed in on this device** remembers the login; otherwise it lasts until the tab is closed. The header gets a **Sign out** button. Changing the password signs everyone out.
+
+1. In the repository go to **Settings → Secrets and variables → Actions → New repository secret**.
+2. Name: `SITE_PASSWORD`. Secret: the password. Save.
+3. Run **Actions → Deploy to GitHub Pages → Run workflow** (or push a commit).
+
+The build stores only a salted PBKDF2 hash of the password, never the password itself. Without the secret, the site opens with no login. To try it locally: `SITE_PASSWORD='…' node scripts/hash-password.mjs >> .env.local`, then `npm run dev`.
+
+**Limits:** GitHub Pages cannot check passwords on a server, so this gate runs in the browser. It keeps casual visitors out, but the built files are still publicly downloadable, and someone with technical skill can read the data in them without the password. Do not put confidential data on the site behind this gate. For real protection use a host with server-side access control (for example Cloudflare Access, Netlify or Vercel password protection, or private GitHub Pages on GitHub Enterprise Cloud).
+
 ### Demo Mode vs shared data
 
 With no Supabase credentials the app runs in **Demo Mode**. It uses the built-in seed data (6 zones, 10 systems, 6 ships, 4 berths) and saves every change to **this browser's localStorage only**. Integrations and journeys start empty: the earlier placeholder ones referred to systems that were removed, and links between the real systems have not been recorded yet. A badge in the header says so. Demo Mode is for trying things out; it is not a multi-user backend.

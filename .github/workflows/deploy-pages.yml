@@ -26,6 +26,10 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # Login page: hashes the SITE_PASSWORD repository secret (if set) for this build.
+      - run: node scripts/hash-password.mjs
+        env:
+          SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
       - run: npm run build
         env:
           VITE_BASE: /${{ github.event.repository.name }}/
