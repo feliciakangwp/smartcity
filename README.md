@@ -123,6 +123,7 @@ Spare plots open with **Expand port map**: Jurong West, Sembawang, Ang Mo Kio an
 - **Ships:** each port has 2 berths and 3 ships, so at busy times one waits at anchorage. Ships approach from the strait, berth, unload and load, then leave.
 - **Port shuttles:** a container truck leaves every 9 seconds, alternating Jurong Port → PSA and PSA → Jurong Port. The container moves from one yard to the other.
 - **Deliveries:** a truck leaves a port every 4.5 seconds for a town (Woodlands, Punggol, Bedok, CBD and others), unloads and drives back. Trucks keep left.
+- **Officers:** officers in navy blue uniforms with peaked caps patrol each zone, walking its edge and the walkway in front of the buildings, pausing now and then.
 - **Flights:** an arrival every 22 seconds lands on the western runway, taxis to one of 4 gates and stays about 28 seconds. Ten passengers walk from the gate through the Traveller Checkpoint counters, then the aircraft departs from the eastern runway.
 
 ### System age and build progress

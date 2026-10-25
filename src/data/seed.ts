@@ -3,7 +3,7 @@
 import type { LandscapeData, ShipConfig, System, SystemModule, Zone } from '@/types/domain';
 import { DEFAULT_PLOTS } from './layout';
 
-export const SEED_VERSION = 4;
+export const SEED_VERSION = 5;
 const STAMP = '2026-10-25T09:00:00.000Z';
 const audit = { createdAt: STAMP, updatedAt: STAMP, archived: false };
 
@@ -50,7 +50,7 @@ type SysSeed = {
 const sysSeeds: SysSeed[] = [
   { n: 1, zone: 1, acronym: 'eServices', name: 'Customs eServices', category: 'Frontend / eService', status: 'Live', criticality: 'High', year: 2012, purpose: 'Online services for traders.' },
   { n: 2, zone: 1, acronym: 'TradeNet4.1', name: 'TradeNet 4.1', category: 'Core Processing', status: 'Live', criticality: 'Mission Critical', year: 2014, purpose: 'Current trade declaration and permit platform.' },
-  { n: 3, zone: 1, acronym: 'TradeNet5.0', name: 'TradeNet 5.0', category: 'Core Processing', status: 'Live', criticality: 'Mission Critical', year: 2025, purpose: 'Next-generation trade declaration and permit platform.' },
+  { n: 3, zone: 1, acronym: 'TradeNet5.0', name: 'TradeNet 5.0', category: 'Core Processing', status: 'Planned', criticality: 'Mission Critical', year: 2027, progress: 0, purpose: 'Next-generation trade declaration and permit platform. New system; development has not started.' },
   { n: 4, zone: 2, acronym: 'CORDIS', name: 'CORDIS', category: 'Compliance', status: 'Planned', criticality: 'High', year: 2027, progress: 0, purpose: 'New compliance system. Development has not started.' },
   { n: 5, zone: 4, acronym: 'ORION', name: 'ORION', category: 'Finance', status: 'In Development', criticality: 'High', year: 2026, progress: 60, purpose: 'New finance system, 60% developed.' },
   { n: 6, zone: 4, acronym: 'POLARIS', name: 'POLARIS', category: 'Finance', status: 'In Development', criticality: 'High', year: 2028, progress: 5, purpose: 'New finance system, 5% developed.' },

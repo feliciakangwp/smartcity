@@ -13,6 +13,7 @@ import { useWorldLayout } from './useWorldLayout';
 import { CameraRig, HOME } from './CameraRig';
 import { IntegrationLines } from './IntegrationLines';
 import { UsageLines } from './UsageLines';
+import { Officers } from './Officers';
 import { MaritimeSimProvider, useSim } from './maritime/SimContext';
 import { Ship } from './maritime/Ship';
 import { ApronBuffer, QuayCrane } from './maritime/QuayCrane';
@@ -74,6 +75,7 @@ export function PortScene() {
           <Ocean />
           <Terrain />
           <Districts />
+          <Officers />
           <Maritime />
           <RoadTrucks />
           <Airport />

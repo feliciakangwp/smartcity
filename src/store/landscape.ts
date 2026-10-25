@@ -104,6 +104,15 @@ export const useLandscape = create<LandscapeStore>()(
       migrate: (persisted, version) => {
         const state = persisted as Partial<LandscapeData>;
         if (version < 3) return { ...createSeed(), platform: { ...createSeed().platform, ...(state.platform ?? {}), mapRings: 0 } } as LandscapeStore;
+        // v5: TradeNet 5.0 is a new system at 0%, not a live one. Only the untouched seed record is corrected.
+        if (version < 5 && state.systems) {
+          const seedTn5 = createSeed().systems.find((s) => s.acronym === 'TradeNet5.0')!;
+          state.systems = state.systems.map((s) =>
+            s.id === seedTn5.id && s.status === 'Live' && s.yearIntroduced === 2025 && s.buildProgress === undefined
+              ? { ...s, status: seedTn5.status, yearIntroduced: seedTn5.yearIntroduced, buildProgress: seedTn5.buildProgress, businessPurpose: seedTn5.businessPurpose }
+              : s,
+          );
+        }
         return upgradeLandscape(state) as LandscapeStore;
       },
       partialize: (s) => {
