@@ -24,7 +24,7 @@ export function buildState(s: System): BuildState {
       ? 'Planned · 0% built'
       : `${progress}% built`
     : legacy
-      ? `Legacy · since ${s.yearIntroduced}`
+      ? `Old infrastructure · ${s.yearIntroduced}`
       : s.yearIntroduced
         ? `New · ${s.yearIntroduced}`
         : s.status;

@@ -131,7 +131,7 @@ Each system has a **go-live year** and, while in development, a **build progress
 
 | State | How the building looks |
 | --- | --- |
-| Live and older than 5 years | Legacy: weathered cream walls, faded colours, stains, a crack, a rusty roof tank, wall air-conditioners |
+| Live and older than 5 years | Old infrastructure, fully built: weathered brick and concrete, grimy windows with rust streaks, a rusty corrugated roof patch, a water tank on stilts, drainpipes, an old satellite dish and wall air-conditioners |
 | Live and 5 years old or less | Modern: bright glass, glowing trim, rooftop solar panels |
 | Planned / In Development, 0% | Fenced empty site with a sign |
 | 1–10% | Foundation slab with rebar |

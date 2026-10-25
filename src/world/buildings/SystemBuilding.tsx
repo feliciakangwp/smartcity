@@ -156,20 +156,43 @@ function Scaffold({ f, built, h, dim }: { f: number; built: number; h: number; d
   );
 }
 
-/** Older than five years: stains, a crack, a rusty water tank and wall-mounted air-conditioners. */
+/** Old infrastructure (over five years, fully built): stains, a crack, rusty corrugated roof sheet,
+ *  a water tank on stilts, drainpipes, a satellite dish and wall-mounted air-conditioners. */
 function Weathering({ f, h, dim }: { f: number; h: number; dim: boolean }) {
   const o = dim ? 0.3 : 0.55;
   const front = f * 0.37;
+  const solid = dim ? 0.35 : undefined;
   const stain = mat('#5e4a3a', { opacity: o });
+  const rust = mat('#8a4f2c', { opacity: solid, roughness: 1 });
+  const pipe = mat('#7d7a73', { opacity: solid, roughness: 0.9 });
   return (
     <group>
       {[[-0.25, 0.3, 0.22], [0.2, 0.55, 0.3], [-0.05, 0.75, 0.18], [0.3, 0.2, 0.15]].map(([px, py, s], i) => (
         <B key={i} s={[f * s, h * 0.18, 0.05]} p={[px * f, h * py, front]} m={stain} />
       ))}
       <B s={[0.08, h * 0.35, 0.05]} p={[f * 0.12, h * 0.45, front + 0.02]} r={[0, 0, 0.5]} m={mat('#2b1d14', { opacity: dim ? 0.3 : 0.9 })} />
-      <Cyl r={f * 0.09} h={f * 0.14} p={[-f * 0.22, h + f * 0.07, -f * 0.12]} m={mat('#8a5a3a', { opacity: dim ? 0.35 : undefined })} />
+      {/* Rusty corrugated sheet patched over part of the roof */}
+      {Array.from({ length: 5 }, (_, i) => (
+        <B key={`r${i}`} s={[f * 0.08, 0.12, f * 0.32]} p={[-f * 0.28 + i * f * 0.085, h + 0.1, f * 0.12]} r={[0.08, 0, 0]} m={rust} />
+      ))}
+      {/* Water tank on stilts */}
+      <group position={[-f * 0.22, h, -f * 0.14]}>
+        {[-1, 1].map((sx) => [-1, 1].map((sz) => <B key={`${sx}${sz}`} s={[0.12, f * 0.12, 0.12]} p={[sx * f * 0.07, f * 0.06, sz * f * 0.07]} m={pipe} />))}
+        <Cyl r={f * 0.1} h={f * 0.13} p={[0, f * 0.18, 0]} m={rust} />
+        <Cyl r={f * 0.105} h={0.15} p={[0, f * 0.25, 0]} m={pipe} />
+      </group>
+      {/* Drainpipes down the side and an old dish */}
+      {[-0.25, 0.2].map((pz) => (
+        <Cyl key={pz} r={0.12} h={h} p={[f * 0.41, h / 2, pz * f]} m={pipe} />
+      ))}
+      <group position={[f * 0.25, h, -f * 0.2]} rotation={[-0.6, 0.4, 0]}>
+        <Cyl r={0.06} h={1.2} p={[0, 0.6, 0]} m={pipe} />
+        <mesh position={[0, 1.3, 0]} scale={[f * 0.09, f * 0.04, f * 0.09]} material={mat('#c9c2b5', { opacity: solid })}>
+          <sphereGeometry args={[1, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        </mesh>
+      </group>
       {[0, 1].map((i) => (
-        <B key={i} s={[f * 0.12, f * 0.08, f * 0.08]} p={[f * (0.1 + i * 0.18), h * (0.35 + i * 0.25), front + f * 0.04]} m={mat('#b9b4aa', { opacity: dim ? 0.35 : undefined })} />
+        <B key={i} s={[f * 0.12, f * 0.08, f * 0.08]} p={[f * (0.1 + i * 0.18), h * (0.35 + i * 0.25), front + f * 0.04]} m={mat('#b9b4aa', { opacity: solid })} />
       ))}
     </group>
   );

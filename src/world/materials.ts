@@ -98,6 +98,61 @@ export function windowTexture(cols: number, rows: number, style: 'grid' | 'band'
   return t;
 }
 
+/** Weathered brick-and-concrete facade for old infrastructure, keeping the window grid of `base`. */
+const agedCache = new Map<string, THREE.Texture>();
+function agedTexture(base?: THREE.Texture) {
+  const key = base ? `${base.repeat.x}x${base.repeat.y}` : 'plain';
+  if (agedCache.has(key)) return agedCache.get(key)!;
+  const size = 128;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#b89c7c';
+  g.fillRect(0, 0, size, size);
+  // Brick courses with offset joints
+  g.strokeStyle = 'rgba(90,64,44,0.45)';
+  g.lineWidth = 1;
+  for (let y = 0; y < size; y += 8) {
+    g.beginPath();
+    g.moveTo(0, y);
+    g.lineTo(size, y);
+    g.stroke();
+    for (let x = (y / 8) % 2 ? 8 : 0; x < size; x += 16) {
+      g.beginPath();
+      g.moveTo(x, y);
+      g.lineTo(x, y + 8);
+      g.stroke();
+    }
+  }
+  // Grime towards the base and patchy discolouration
+  const grad = g.createLinearGradient(0, 0, 0, size);
+  grad.addColorStop(0, 'rgba(60,45,30,0.05)');
+  grad.addColorStop(1, 'rgba(60,45,30,0.35)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, size, size);
+  g.fillStyle = 'rgba(70,55,40,0.18)';
+  g.fillRect(size * 0.62, size * 0.1, size * 0.3, size * 0.35);
+  if (base) {
+    // Small, grimy windows with rust streaks running down from the sills
+    g.fillStyle = '#3f4a52';
+    g.fillRect(size * 0.26, size * 0.28, size * 0.48, size * 0.4);
+    g.fillStyle = 'rgba(160,170,170,0.35)';
+    g.fillRect(size * 0.26, size * 0.28, size * 0.48, size * 0.08);
+    g.fillStyle = '#8a8378';
+    g.fillRect(size * 0.22, size * 0.68, size * 0.56, size * 0.05);
+    g.fillStyle = 'rgba(120,62,30,0.45)';
+    g.fillRect(size * 0.3, size * 0.73, size * 0.04, size * 0.24);
+    g.fillRect(size * 0.62, size * 0.73, size * 0.03, size * 0.16);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  if (base) t.repeat.copy(base.repeat);
+  t.anisotropy = 4;
+  agedCache.set(key, t);
+  return t;
+}
+
 export type Tone = 'normal' | 'hover' | 'highlight' | 'dim';
 /** Standard, legacy (older than five years) or modern (new and vibrant). */
 export type Look = 'standard' | 'legacy' | 'modern';
@@ -111,11 +166,14 @@ export function buildingMats(accent: string, tone: Tone, look: Look = 'standard'
   const acc = legacy ? tint(accent, '#7d7468', 0.55) : accent;
   const em = glow ? { emissive: accent, emissiveIntensity: glow } : modern ? { emissive: accent, emissiveIntensity: 0.12 } : {};
   const c = clipY !== undefined ? { clipY } : {};
+  // Old brick facades only take a faint highlight so they still read as old when selected.
+  const wallEm = legacy && glow ? { emissive: accent, emissiveIntensity: glow * 0.25 } : em;
   return {
-    wall: (map?: THREE.Texture) => mat(legacy ? '#d3c7b2' : modern ? '#f7fafc' : C.white, { map, opacity: dim, roughness: legacy ? 0.95 : 0.6, ...em, ...c }),
+    wall: (map?: THREE.Texture) =>
+      mat(legacy ? '#ffffff' : modern ? '#f7fafc' : C.white, { map: legacy ? agedTexture(map) : map, opacity: dim, roughness: legacy ? 0.97 : 0.6, ...wallEm, ...c }),
     accent: mat(acc, { opacity: dim, roughness: legacy ? 0.9 : modern ? 0.35 : 0.5, metalness: modern ? 0.2 : 0.05, ...em, ...c }),
     glass: mat(legacy ? '#7d8f9b' : modern ? '#7cc6f2' : C.glass, { opacity: dim ?? 0.95, roughness: legacy ? 0.55 : modern ? 0.05 : 0.12, metalness: modern ? 0.5 : 0.35, ...em, ...c }),
-    roof: mat(legacy ? '#7a6455' : C.roof, { opacity: dim, roughness: 0.85, ...c }),
+    roof: mat(legacy ? '#7d5a44' : C.roof, { opacity: dim, roughness: 0.85, ...c }),
     dark: mat(legacy ? '#4a4038' : C.dark, { opacity: dim, roughness: 0.6, ...c }),
     steel: mat(legacy ? '#6d6a66' : C.steel, { opacity: dim, roughness: legacy ? 0.85 : 0.45, metalness: legacy ? 0.1 : 0.4, ...c }),
     screen: mat(legacy ? '#9fb3bd' : '#5ad6f0', { emissive: legacy ? '#000000' : '#22c3e6', emissiveIntensity: legacy ? 0 : modern ? 1.2 : 0.9, opacity: dim, ...c }),

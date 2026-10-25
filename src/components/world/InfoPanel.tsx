@@ -384,7 +384,7 @@ function BuildSummary({ system }: { system: Parameters<typeof buildState>[0] }) 
   return (
     <p className="text-sm text-ink-700">
       Live since <b>{system.yearIntroduced}</b> · <span className="num">{b.age}</span> year{b.age === 1 ? '' : 's'}{' '}
-      {b.legacy ? <Chip color="#9a6b4f">Legacy (over {LEGACY_AGE_YEARS} years)</Chip> : <Chip color="#22c3e6">New</Chip>}
+      {b.legacy ? <Chip color="#9a6b4f">Old infrastructure (over {LEGACY_AGE_YEARS} years) · fully built</Chip> : <Chip color="#22c3e6">New · fully built</Chip>}
     </p>
   );
 }

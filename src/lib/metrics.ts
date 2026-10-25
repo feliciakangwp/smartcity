@@ -101,7 +101,7 @@ export function summarise(l: Landscape) {
     byAge: (() => {
       const st = systems.map(buildState);
       return [
-        { name: 'Legacy (over 5 years)', value: st.filter((b) => b.legacy).length, color: '#9a6b4f' },
+        { name: 'Old infrastructure (over 5 years)', value: st.filter((b) => b.legacy).length, color: '#9a6b4f' },
         { name: 'New (5 years or less)', value: st.filter((b) => !b.legacy && !b.developing && b.age !== null).length, color: '#22c3e6' },
         { name: 'Under development', value: st.filter((b) => b.developing).length, color: '#e0a21a' },
         { name: 'Year not recorded', value: st.filter((b) => !b.developing && b.age === null).length, color: '#94a3b8' },
